@@ -100,6 +100,7 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 
 | Fichier | Description |
 |---------|-------------|
+| `groups.txt` | Liste des groupes à scraper (nom:group_id, un par ligne) |
 | `urls.json` / `urls_graphql.json` | fbid + URLs |
 | `download-{name}/*.jpg` | Images téléchargées (préfixé par `--name`) |
 | `emails-{name}.csv` | Emails extraits (préfixé par `--name`) |
@@ -110,7 +111,8 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 fb_selenium.py              # Script principal (Selenium + GraphQL + OCR)
 fb_graphql.py               # GraphQL standalone (PowerShell)
 all_email_provider_domains.txt.txt  # Liste des domaines email connus
-run_all.sh                  # Lancement parallèle (screen ou --systemd)
+groups.txt                  # Liste des groupes (nom:group_id, un par ligne)
+run_all.sh                  # Lancement parallèle (lit groups.txt)
 facebook-media-ocr.service  # Unité systemd pour le service
 facebook-media-ocr.timer    # Timer systemd (tous les lundis 2h)
 download-{name}/            # Images téléchargées (selon --name)
@@ -201,13 +203,33 @@ screen -S jobenisere
 | `exit` | Fermer la session |
 | `screen -ls` | Lister les sessions |
 
-### 3. Script de lancement tout-en-un
+### 3. Fichier groups.txt
+
+Tous les groupes sont listés dans `groups.txt` (un par ligne, format `nom:group_id`) :
+
+```
+# Exemple (les lignes # sont ignorées)
+saisonniers:362347087928780
+ain:offres.d.emploi.ain
+aisne:offres.d.emploi.aisne
+allier:offres.d.emploi.allier
+...
+```
+
+Les slug textes (`offres.d.emploi.ain`) comme les ID numériques fonctionnent.
+
+**Pour ajouter un groupe** : une ligne dans `groups.txt`, c'est tout.
+
+### 4. Script de lancement tout-en-un
 
 ```bash
 chmod +x run_all.sh
 ./run_all.sh              # Mode screen (interactif)
 ./run_all.sh --systemd    # Mode service (arrière-plan direct)
 ```
+
+Lit automatiquement `groups.txt`, saute les groupes déjà terminés, et respecte
+la limite de parallélisme dictée par la RAM disponible.
 
 ### 4. Surveillance
 
@@ -339,17 +361,27 @@ RAM dispo = total - 512 Mo (marge système)
 max = RAM_dispo / 300 Mo (estimation par Chrome headless)
 ```
 
-| RAM VPS | Max instances | Groupes simultanés |
-|---------|---------------|-------------------|
-| 2 Go    | 3             | 3 sur 4           |
-| 4 Go    | 11            | Tous (4)          |
-| 8 Go    | 25            | Tous (4)          |
+| RAM VPS | Max instances | 4 groupes | 90+ groupes |
+|---------|---------------|-----------|-------------|
+| 2 Go    | 3             | 3 sur 4   | 3 à la fois |
+| 4 Go    | 11            | Tous      | 11 à la fois |
+| 8 Go    | 25            | Tous      | 25 à la fois |
 
 Si la RAM est insuffisante pour tout lancer d'un coup, les groupes en attente
-démarreront automatiquement dès qu'une place se libère (quand un groupe termine).
+démarreront automatiquement dès qu'une place se libère (quand un groupe
+termine).
+
+**Avec 90 départements** : le script tourne en continu, 3 à 11 groupes en
+parallèle selon la RAM. Ceux qui sont déjà terminés sont sautés
+automatiquement (vérification du `state-{name}.json`). Le temps total dépend
+du nombre de photos par groupe, mais le caractère hebdomadaire laisse
+largement le temps de tout traiter.
 
 Voir le calcul en direct dans les logs :
 
 ```
 [date] RAM totale : 1982 Mo — Parallélisme max : 3
+[  1/90] ain -> offres.d.emploi.ain
+[  2/90] aisne -> offres.d.emploi.aisne
+[  SKIP] saisonniers -> 362347087928780 (déjà terminé)
 ```
