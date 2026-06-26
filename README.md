@@ -83,6 +83,26 @@ python fb_selenium.py --ocr-only ./download
 python fb_graphql.py <group_id> --pages 50
 ```
 
+### Découverte automatique des groupes par département
+```bash
+# Tous les départements métropolitains (96)
+python discover_groups.py
+
+# Départements spécifiques
+python discover_groups.py --dept 01 08 36
+
+# Simulation (n'écrit pas groups.txt)
+python discover_groups.py --dept 01 --dry-run
+```
+
+Stratégie :
+1. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
+2. Vérifie son existence via PowerShell
+3. Si trouvé → résout l'ID numérique et l'ajoute à `groups.txt`
+4. Si absent → cherche sur DuckDuckGo (max 3 résultats), vérifie et ajoute
+
+Supprime et régénère `groups.txt` à chaque exécution.
+
 ## Algorithmes d'extraction d'emails
 
 | Étape | Description |
@@ -108,6 +128,7 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 ```
 fb_selenium.py              # Script principal (Selenium + GraphQL + OCR)
 fb_graphql.py               # GraphQL standalone (PowerShell)
+discover_groups.py          # Découverte auto des groupes par département
 all_email_provider_domains.txt.txt  # Liste des domaines email connus
 groups.txt                  # Liste des groupes (nom:group_id, un par ligne)
 run_all.sh                  # Lancement parallèle (lit groups.txt)
