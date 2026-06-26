@@ -228,8 +228,9 @@ chmod +x run_all.sh
 ./run_all.sh --systemd    # Mode service (arrière-plan direct)
 ```
 
-Lit automatiquement `groups.txt`, saute les groupes déjà terminés, et respecte
-la limite de parallélisme dictée par la RAM disponible.
+Lit automatiquement `groups.txt`, lance chaque groupe. Le script Python
+gère lui-même la reprise (state.json) et le skip si déjà terminé. Aucune
+logique complexe dans le shell.
 
 ### 4. Surveillance
 
@@ -381,7 +382,9 @@ Voir le calcul en direct dans les logs :
 
 ```
 [date] RAM totale : 1982 Mo — Parallélisme max : 3
-[  1/90] ain -> offres.d.emploi.ain
-[  2/90] aisne -> offres.d.emploi.aisne
-[  SKIP] saisonniers -> 362347087928780 (déjà terminé)
+  [  1/90] ain -> offres.d.emploi.ain
+  [  2/90] aisne -> offres.d.emploi.aisne
+  [  3/90] allier -> offres.d.emploi.allier
+... (attente de place libre) ...
+  [  4/90] alpes -> offres.d.emploi.alpes
 ```

@@ -1272,6 +1272,7 @@ class FacebookScraper:
             print("[*] Toutes les photos sont déjà traitées")
             self._save_ocr_csv(ocr_results)
             self._print_ocr_summary(ocr_results)
+            clear_state()
             return
 
         print(f"\n[*] {total} photos trouvées via GraphQL\n")

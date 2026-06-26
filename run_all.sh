@@ -38,33 +38,12 @@ launch_job() {
   fi
 }
 
-# Vérifier si un groupe est déjà terminé (state.json avec processed >= total)
-is_group_done() {
-  local name="$1"
-  local state_file="state-${name}.json"
-  if [ ! -f "$state_file" ]; then
-    return 1  # pas de state = pas commencé
-  fi
-  # Vérifie si "processed" existe et est >= au nombre total de photos
-  # Si le fichier state contient une clé "phase" mais pas "processed", on ignore
-  local processed
-  processed=$(python3 -c "import json; d=json.load(open('$state_file')); print(d.get('processed', -1))" 2>/dev/null || echo -1)
-  [ "$processed" -ge 0 ] 2>/dev/null
-  return $?
-}
-
 total=${#GROUPS[@]}
 idx=0
 for entry in "${GROUPS[@]}"; do
   name="${entry%%:*}"
   gid="${entry##*:}"
   idx=$((idx + 1))
-
-  # Sauter les groupes déjà terminés (pour ne pas perdre de temps)
-  if is_group_done "$name"; then
-    echo "  [SKIP] $name (déjà terminé)"
-    continue
-  fi
 
   printf "  [%3d/%d] %s -> %s\n" "$idx" "$total" "$name" "$gid"
 
