@@ -123,3 +123,167 @@ state-{name}.json    # Reprise (selon --name)
 | ChromeDriver | `%USERPROFILE%\appdata\...` | `/usr/bin/chromedriver` |
 | Tesseract | `C:\Program Files\...` | `/usr/bin/tesseract` |
 | Headless | `--headless=new` (par défaut, utiliser `--no-headless` pour voir le navigateur) | Idem |
+
+## Déploiement VPS (Ubuntu)
+
+### 1. Installation complète
+
+```bash
+# Mise à jour
+sudo apt update && sudo apt upgrade -y
+
+# Chrome
+wget -qO- https://dl.google.com/linux/linux_signing_key.pub | sudo gpg --dearmor -o /usr/share/keyrings/google-chrome.gpg
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl.google.com/linux/chrome/deb/ stable main" | sudo tee /etc/apt/sources.list.d/google-chrome.list
+sudo apt update && sudo apt install -y google-chrome-stable
+
+# Dépendances système
+sudo apt install -y chromium-chromedriver tesseract-ocr tesseract-ocr-fra pwsh git screen
+
+# Python + pip
+sudo apt install -y python3 python3-pip python3-venv
+
+# Cloner le repo
+git clone https://github.com/rachid-softdev/FacebookMediaOcr.git
+cd FacebookMediaOcr
+
+# Environnement Python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Vérifications
+google-chrome --version                                    # Chrome 149+
+chromedriver --version                                     # ChromeDriver 149+
+tesseract --version                                        # Tesseract + fra
+pwsh --version                                             # PowerShell Core 7+
+python3 -c "import selenium, cv2, pytesseract, requests; print('OK')"
+```
+
+### 2. Lancement parallèle avec screen
+
+Chaque groupe dans une session `screen` dédiée :
+
+```bash
+# Lister les sessions en cours
+screen -ls
+
+# Créer une session pour un groupe
+screen -S saisonniers
+# Dans la session :
+cd ~/FacebookMediaOcr
+source .venv/bin/activate
+python fb_selenium.py --live --name saisonniers --group-id 362347087928780
+# Ctrl+A puis D pour détacher (le script continue)
+
+# Lancer les autres groupes (chacun dans un nouveau screen)
+screen -S indre
+# ...
+screen -S ardennes
+# ...
+screen -S jobenisere
+# ...
+```
+
+**Raccourcis screen** :
+
+| Commande | Action |
+|----------|--------|
+| `screen -S <nom>` | Nouvelle session nommée |
+| `Ctrl+A D` | Détacher (laisser tourner) |
+| `screen -r <nom>` | Rattacher une session |
+| `screen -r` | Rattacher la session unique |
+| `Ctrl+C` | Arrêter le script |
+| `exit` | Fermer la session |
+| `screen -ls` | Lister les sessions |
+
+### 3. Script de lancement tout-en-un
+
+Crée `run_all.sh` pour lancer tous les groupes d'un coup :
+
+```bash
+#!/bin/bash
+cd ~/FacebookMediaOcr
+source .venv/bin/activate
+
+GROUPS=(
+  "saisonniers:362347087928780"
+  "indre:offres.d.emploi.indre"
+  "ardennes:offres.d.emploi.ardennes"
+  "jobenisere:jobenisere"
+)
+
+for entry in "${GROUPS[@]}"; do
+  name="${entry%%:*}"
+  gid="${entry##*:}"
+  screen -dmS "$name" bash -c "cd ~/FacebookMediaOcr && source .venv/bin/activate && python fb_selenium.py --live --name $name --group-id $gid"
+  echo "  Lancé : $name (--group-id $gid)"
+done
+
+echo ""
+echo "Pour suivre : screen -ls"
+echo "Pour voir un log : screen -r <nom>"
+```
+
+```bash
+chmod +x run_all.sh
+./run_all.sh
+```
+
+### 4. Surveillance
+
+```bash
+# Voir les sessions actives
+screen -ls
+
+# Voir la sortie d'un groupe en direct (sans bloquer)
+screen -r saisonniers
+# Ctrl+A D pour détacher
+
+# Vérifier l'avancement (tail des logs implicites via screen)
+# Ou regarder les fichiers state directement :
+cat state-saisonniers.json
+
+# Consolider tous les emails trouvés
+head -1 emails-saisonniers.csv > all_emails.csv
+for f in emails-*.csv; do
+  tail -n +2 "$f" >> all_emails.csv
+done
+echo "Consolidé dans all_emails.csv"
+```
+
+### 5. Reprise après reboot VPS
+
+Ajouter au crontab pour relance automatique :
+
+```bash
+crontab -e
+```
+
+Ligne à ajouter :
+
+```cron
+@reboot cd /home/<user>/FacebookMediaOcr && ./run_all.sh
+```
+
+### 6. Mise à jour du code
+
+```bash
+cd ~/FacebookMediaOcr
+git pull
+# Redémarrer les sessions screen si nécessaire
+screen -ls | grep -oP '\d+\.\S+' | while read s; do screen -S "$s" -X quit; done
+./run_all.sh
+```
+
+### 7. Pièges courants
+
+| Problème | Solution |
+|----------|----------|
+| `pwsh: command not found` | `sudo apt install pwsh` (PowerShell Core) |
+| `chromedriver: not found` | `sudo apt install chromium-chromedriver` |
+| Chrome ouvre une popup "Chrome n'est pas à jour" | Ignorer, le headless fonctionne quand même |
+| Erreur `Failed to create shared context` | Sans conséquence, lancer avec `--no-headless` pour voir |
+| `state.json` ne reprend pas au bon endroit | Supprimer `state-{name}.json` et relancer depuis le début |
+| Concurrence sur le ChromeDriver | Chaque instance Selenium lance son propre driver, sans conflit |
+| Processus zombie screen | `screen -wipe` pour nettoyer
