@@ -44,10 +44,20 @@ Afficher le navigateur (debug) :
 python fb_selenium.py --live --no-headless
 ```
 
-Changer de groupe (ID depuis l'URL) :
+Changer de groupe (ID depuis l'URL, y compris les slugs texte) :
 ```bash
 python fb_selenium.py --live --group-id 175831749464922
+python fb_selenium.py --live --group-id offres.d.emploi.indre
 ```
+
+### Exécution parallèle (VPS, plusieurs groupes simultanément)
+```bash
+# Chaque instance doit avoir un --name unique pour isoler fichiers + dossiers
+python fb_selenium.py --live --name saisonniers --group-id 362347087928780
+python fb_selenium.py --live --name indre    --group-id offres.d.emploi.indre
+python fb_selenium.py --live --name ardennes --group-id offres.d.emploi.ardennes
+```
+Produit : `state-{name}.json`, `emails-{name}.csv`, `download-{name}/` — pas de conflit.
 
 Pipeline :
 1. **GraphQL** (PowerShell) → récupère les fbid des photos (4000 max)
@@ -91,18 +101,18 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 | Fichier | Description |
 |---------|-------------|
 | `urls.json` / `urls_graphql.json` | fbid + URLs |
-| `download/*.jpg` | Images téléchargées |
-| `emails.csv` | Emails extraits |
-| `state.json` | Reprise après interruption |
+| `download-{name}/*.jpg` | Images téléchargées (préfixé par `--name`) |
+| `emails-{name}.csv` | Emails extraits (préfixé par `--name`) |
+| `state-{name}.json` | Reprise après interruption (préfixé par `--name`) |
 
 ## Structure
 ```
 fb_selenium.py       # Script principal (Selenium + GraphQL + OCR)
 fb_graphql.py        # GraphQL standalone (PowerShell)
 all_email_provider_domains.txt.txt  # Liste des domaines email connus
-download/            # Images téléchargées
-emails.csv           # Résultats OCR
-state.json           # Reprise
+download-{name}/     # Images téléchargées (selon --name)
+emails-{name}.csv    # Résultats OCR (selon --name)
+state-{name}.json    # Reprise (selon --name)
 ```
 
 ## Compatibilité

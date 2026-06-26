@@ -1153,14 +1153,14 @@ class FacebookScraper:
     def _powershell_graphql_fbids(group_id, max_pages=500):
         """Récupère la liste des fbids via PowerShell + GraphQL (pas de login)."""
         from fb_graphql import powershell, fetch_lsd, graphql_page
-        lsd = fetch_lsd(group_id)
+        lsd, resolved_id = fetch_lsd(group_id)
         if not lsd:
             return None
         fbids = []
         cursor = None
         for page in range(1, max_pages + 1):
             print(f"  [GraphQL page {page}]", end="", flush=True)
-            entries, cursor = graphql_page(lsd, group_id, cursor)
+            entries, cursor = graphql_page(lsd, resolved_id, cursor)
             if not entries:
                 print(" empty")
                 break
@@ -1436,12 +1436,21 @@ def main():
                         help="Afficher le navigateur (desactiver headless)")
     parser.add_argument("--group-id", metavar="ID",
                         help="ID du groupe Facebook (defaut: 362347087928780)")
+    parser.add_argument("--name", metavar="ETIQUETTE",
+                        help="Prefixe pour isolement (state-{name}.json, download-{name}/, ...)")
     args = parser.parse_args()
 
     if args.group_id:
         global GROUP_ID, GROUP_MEDIA_URL
         GROUP_ID = args.group_id
         GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
+
+    if args.name:
+        global STATE_FILE, EMAILS_CSV, DOWNLOAD_DIR
+        STATE_FILE = f"state-{args.name}.json"
+        EMAILS_CSV = f"emails-{args.name}.csv"
+        DOWNLOAD_DIR = f"download-{args.name}"
+        print(f"[*] Mode isolé : {STATE_FILE}, {EMAILS_CSV}, {DOWNLOAD_DIR}/")
 
     if args.ocr_only:
         print("[*] Mode OCR seul")

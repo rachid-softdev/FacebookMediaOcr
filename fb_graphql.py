@@ -81,7 +81,8 @@ def powershell(script, timeout=30):
 
 
 def fetch_lsd(group_id):
-    """Récupère le token LSD via PowerShell Invoke-WebRequest."""
+    """Récupère le token LSD + l'ID numérique du groupe via PowerShell Invoke-WebRequest.
+    Retourne (lsd, numeric_group_id) ou (None, None) en cas d'échec."""
     ps_script = f'''
 $ua = "{UA}"
 $tmpHtml = [System.IO.Path]::GetTempFileName() + ".html"
@@ -99,13 +100,14 @@ try {{
     out, err, code = powershell(ps_script, timeout=35)
     if "__POWERSHELL_ERROR__" in out[:100]:
         print(f"  [!] PowerShell error: {out[out.find('__POWERSHELL_ERROR__')+20:].strip()[:200]}")
-        return None
+        return None, None
     if code != 0 or not out.strip():
         print(f"  [!] PowerShell failed (code {code})")
         if err:
             for line in err.strip().splitlines()[:5]:
                 print(f"      {line}")
-        return None
+        return None, None
+    lsd = None
     for pat in [
         r'"LSD",\[\],\{"token":"([^"]+)"',
         r'"__DTSSToken":"([^"]+)"',
@@ -114,9 +116,26 @@ try {{
         if m:
             lsd = m.group(1)
             print(f"  LSD: {lsd[:20]}…")
-            return lsd
-    print("  [!] LSD token not found in page")
-    return None
+            break
+    if not lsd:
+        print("  [!] LSD token not found in page")
+        return None, None
+
+    # Résoudre l'ID numérique si le group_id est un slug texte
+    numeric_id = None
+    for pat in [
+        r'"groupID":"(\d+)"',
+        r'"group_id":"(\d+)"',
+        r'fb://group/?id=(\d+)',
+    ]:
+        m = re.search(pat, out)
+        if m:
+            numeric_id = m.group(1)
+            break
+    if numeric_id and numeric_id != group_id:
+        print(f"  Group ID résolu : {group_id} -> {numeric_id}")
+        return lsd, numeric_id
+    return lsd, group_id
 
 
 # --- GraphQL ---------------------------------------------------------------
@@ -301,7 +320,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     print("[*] Connexion…")
-    lsd = fetch_lsd(args.group_id)
+    lsd, resolved_id = fetch_lsd(args.group_id)
     if not lsd:
         sys.exit(1)
 
@@ -316,8 +335,7 @@ if __name__ == "__main__":
     while page < args.pages:
         page += 1
         print(f"\n--- Page {page} ---")
-
-        entries, cursor = graphql_page(lsd, args.group_id, cursor)
+        entries, cursor = graphql_page(lsd, resolved_id, cursor)
         if not entries:
             if page == 1:
                 print("  [!] Aucune photo trouvée")
