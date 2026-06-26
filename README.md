@@ -65,9 +65,7 @@ Pipeline :
 3. **Download** → télécharge l'image
 4. **OCR** → prétraitement OpenCV → Tesseract → emails
 
-**Reprise après interruption** : si le script est interrompu (Ctrl+C ou crash),
-relancez la même commande. Le fichier `state.json` contient l'avancement et les
-photos déjà traitées sont sautées automatiquement.
+**Reprise après interruption** : voir section [Reprise après interruption](#9-reprise-après-interruption) plus bas.
 
 ### Pipeline complet (avec login Facebook)
 ```bash
@@ -387,4 +385,61 @@ Voir le calcul en direct dans les logs :
   [  3/90] allier -> offres.d.emploi.allier
 ... (attente de place libre) ...
   [  4/90] alpes -> offres.d.emploi.alpes
+```
+
+### 9. Reprise après interruption
+
+Chaque groupe a son propre fichier `state-{name}.json` qui fait office
+de **marque-page** : il stocke le nombre de photos déjà traitées.
+
+#### Cycle de vie d'un groupe
+
+```
+Démarrage
+  │
+  ├─ state-{name}.json trouvé ? ── NON ──> Départ à zéro
+  │
+  └─ OUI ──> Reprend à la photo N (index "processed")
+               │
+               ├─ "processed" >= total photos ──> Déjà fini, on passe
+               │                                    (state supprimé)
+               │
+               └─ "processed" < total ──> On continue
+```
+
+#### Scénarios concrets
+
+| Scénario | Ce qui se passe |
+|----------|----------------|
+| **Ctrl+C** en cours de route | `state-{name}.json` sauvegarde l'index atteint. Relancer reprend exactement à cette photo. |
+| **Crash / reboot VPS** | Idem : le fichier state est préservé (écrit avant le crash) ou perdu → la prochaine exécution du timer relance tout ; les groupes avancés reprennent. |
+| **Le timer du lundi suivant** | `run_all.sh` tue les éventuels vieux process, puis relance chaque groupe. Ceux qui étaient finis voient `processed >= total` et s'arrêtent en ~2s. Ceux qui n'avaient pas fini reprennent à l'index sauvegardé. |
+| **Supprimer un groupe de groups.txt** | Les fichiers `state-{name}.json`, `download-{name}/`, `emails-{name}.csv` ne sont pas touchés. Ils restent sur le disque, à supprimer manuellement si souhaité. |
+| **Ajouter un nouveau groupe** | Une ligne dans `groups.txt` suffit. Au prochain run, le groupe n'aura pas de state → traité intégralement. |
+
+#### Fichier state.json brut
+
+```json
+{"phase": "live", "processed": 42, "ocr_results": [...]}
+```
+
+- `processed` : index de la dernière photo traitée (commence à 0)
+- `ocr_results` : emails déjà trouvés (pour ne pas les perdre)
+- Le state est **sauvegardé** à chaque batch (toutes les 200 photos) et sur Ctrl+C/erreur
+- Le state est **supprimé** quand le groupe est terminé (plus rien à traiter)
+
+#### Illustration
+
+```
+Semaine 1 : run_all.sh lance tous les groupes
+  ├─ Groupe A (200 photos) : state créé → avance → terminé → state supprimé
+  ├─ Groupe B (8 photos)   : state créé → avance → terminé → state supprimé
+  ├─ Groupe C (4000 photos): state créé → avance jusqu'à 1500 → CRASH !
+  └─ Groupe D (16 photos)  : jamais démarré (pas de state)
+
+Semaine 2 : le timer relance
+  ├─ Groupe A : state absent → démarre → "déjà 0 photo" → s'arrête (~2s)
+  ├─ Groupe B : state absent → idem (~2s)
+  ├─ Groupe C : state présent (processed=1500) → reprend à 1500 → finit → state supprimé
+  └─ Groupe D : state absent → traite les 16 photos → state supprimé
 ```
