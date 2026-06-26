@@ -84,24 +84,38 @@ python fb_graphql.py <group_id> --pages 50
 ```
 
 ### Découverte automatique des groupes par département
+
 ```bash
-# Tous les départements métropolitains (96)
+# Tous les 101 départements (métropole + outre-mer)
 python discover_groups.py
 
 # Départements spécifiques
 python discover_groups.py --dept 01 08 36
 
-# Simulation (n'écrit pas groups.txt)
-python discover_groups.py --dept 01 --dry-run
+# Simulation (n'écrit pas les fichiers)
+python discover_groups.py --dry-run
 ```
 
 Stratégie :
-1. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
-2. Vérifie son existence via PowerShell
-3. Si trouvé → résout l'ID numérique et l'ajoute à `groups.txt`
-4. Si absent → cherche sur DuckDuckGo (max 3 résultats), vérifie et ajoute
+1. Charge `departements.json` (101 départements)
+2. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
+3. Vérifie son existence via PowerShell
+4. Si trouvé → résout l'ID numérique
+5. Si absent → cherche sur DuckDuckGo (max 3 groupes par département)
+6. Si rien trouvé → on passe au suivant (pas de blocage)
 
-Supprime et régénère `groups.txt` à chaque exécution.
+Produit :
+- `groups.txt` : pour `run_all.sh` (format `name:group_id`)
+- `groups.json` : format détaillé avec URL, source (pattern/search), département
+
+```json
+[
+  {"name": "emploi01", "group_id": "927601630680870",
+   "slug": "offres.d.emploi.ain",
+   "url": "https://www.facebook.com/groups/offres.d.emploi.ain",
+   "dept_num": "01", "dept_name": "Ain", "source": "pattern"}
+]
+```
 
 ## Algorithmes d'extraction d'emails
 
@@ -118,7 +132,8 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 
 | Fichier | Description |
 |---------|-------------|
-| `groups.txt` | Liste des groupes à scraper (nom:group_id, un par ligne) |
+| `groups.txt` | Groupes trouvés (name:group_id, pour run_all.sh) |
+| `groups.json` | Groupes trouvés (format détaillé avec URLs + source) |
 | `urls.json` / `urls_graphql.json` | fbid + URLs |
 | `download-{name}/*.jpg` | Images téléchargées (préfixé par `--name`) |
 | `emails-{name}.csv` | Emails extraits (préfixé par `--name`) |
@@ -128,14 +143,16 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 ```
 fb_selenium.py              # Script principal (Selenium + GraphQL + OCR)
 fb_graphql.py               # GraphQL standalone (PowerShell)
-discover_groups.py          # Découverte auto des groupes par département
+discover_groups.py          # Decouverte auto des groupes par departement
+departements.json           # Liste des 101 departements (source discover)
 all_email_provider_domains.txt.txt  # Liste des domaines email connus
-groups.txt                  # Liste des groupes (nom:group_id, un par ligne)
-run_all.sh                  # Lancement parallèle (lit groups.txt)
-facebook-media-ocr.service  # Unité systemd pour le service
+groups.txt                  # Groupes trouves (format name:group_id)
+groups.json                 # Groupes trouves (format detaille avec URL)
+run_all.sh                  # Lancement parallele (lit groups.txt)
+facebook-media-ocr.service  # Unite systemd pour le service
 facebook-media-ocr.timer    # Timer systemd (tous les lundis 2h)
-download-{name}/            # Images téléchargées (selon --name)
-emails-{name}.csv           # Résultats OCR (selon --name)
+download-{name}/            # Images telechargees (selon --name)
+emails-{name}.csv           # Resultats OCR (selon --name)
 state-{name}.json           # Reprise (selon --name)
 logs-{name}.txt             # Logs individuels (mode service)
 ```
