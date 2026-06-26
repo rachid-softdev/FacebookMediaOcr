@@ -1,0 +1,11 @@
+[Unit]
+Description=Facebook Media OCR - Execution hebdomadaire
+Requires=facebook-media-ocr.service
+
+[Timer]
+OnCalendar=Mon *-*-* 02:00:00
+Persistent=true
+RandomizedDelaySec=30m
+
+[Install]
+WantedBy=timers.target

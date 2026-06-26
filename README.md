@@ -107,12 +107,16 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 
 ## Structure
 ```
-fb_selenium.py       # Script principal (Selenium + GraphQL + OCR)
-fb_graphql.py        # GraphQL standalone (PowerShell)
+fb_selenium.py              # Script principal (Selenium + GraphQL + OCR)
+fb_graphql.py               # GraphQL standalone (PowerShell)
 all_email_provider_domains.txt.txt  # Liste des domaines email connus
-download-{name}/     # Images téléchargées (selon --name)
-emails-{name}.csv    # Résultats OCR (selon --name)
-state-{name}.json    # Reprise (selon --name)
+run_all.sh                  # Lancement parallèle (screen ou --systemd)
+facebook-media-ocr.service  # Unité systemd pour le service
+facebook-media-ocr.timer    # Timer systemd (tous les lundis 2h)
+download-{name}/            # Images téléchargées (selon --name)
+emails-{name}.csv           # Résultats OCR (selon --name)
+state-{name}.json           # Reprise (selon --name)
+logs-{name}.txt             # Logs individuels (mode service)
 ```
 
 ## Compatibilité
@@ -199,49 +203,26 @@ screen -S jobenisere
 
 ### 3. Script de lancement tout-en-un
 
-Crée `run_all.sh` pour lancer tous les groupes d'un coup :
-
-```bash
-#!/bin/bash
-cd ~/FacebookMediaOcr
-source .venv/bin/activate
-
-GROUPS=(
-  "saisonniers:362347087928780"
-  "indre:offres.d.emploi.indre"
-  "ardennes:offres.d.emploi.ardennes"
-  "jobenisere:jobenisere"
-)
-
-for entry in "${GROUPS[@]}"; do
-  name="${entry%%:*}"
-  gid="${entry##*:}"
-  screen -dmS "$name" bash -c "cd ~/FacebookMediaOcr && source .venv/bin/activate && python fb_selenium.py --live --name $name --group-id $gid"
-  echo "  Lancé : $name (--group-id $gid)"
-done
-
-echo ""
-echo "Pour suivre : screen -ls"
-echo "Pour voir un log : screen -r <nom>"
-```
-
 ```bash
 chmod +x run_all.sh
-./run_all.sh
+./run_all.sh              # Mode screen (interactif)
+./run_all.sh --systemd    # Mode service (arrière-plan direct)
 ```
 
 ### 4. Surveillance
 
 ```bash
-# Voir les sessions actives
+# Mode screen : voir les sessions actives
 screen -ls
+screen -r saisonniers     # Ctrl+A D pour détacher
 
-# Voir la sortie d'un groupe en direct (sans bloquer)
-screen -r saisonniers
-# Ctrl+A D pour détacher
+# Mode service : vérifier les process
+ps aux | grep fb_selenium
 
-# Vérifier l'avancement (tail des logs implicites via screen)
-# Ou regarder les fichiers state directement :
+# Logs individuels
+tail -f logs-saisonniers.txt
+
+# Vérifier l'avancement
 cat state-saisonniers.json
 
 # Consolider tous les emails trouvés
@@ -252,18 +233,51 @@ done
 echo "Consolidé dans all_emails.csv"
 ```
 
-### 5. Reprise après reboot VPS
+### 5. Exécution automatique hebdomadaire (systemd timer)
 
-Ajouter au crontab pour relance automatique :
+Fichiers fournis dans le repo :
 
-```bash
-crontab -e
+```
+facebook-media-ocr.service   # Service oneshot
+facebook-media-ocr.timer     # Timer : tous les lundis à 2h
+run_all.sh                   # Script de lancement (mode --systemd)
 ```
 
-Ligne à ajouter :
+**Installation :**
 
-```cron
-@reboot cd /home/<user>/FacebookMediaOcr && ./run_all.sh
+```bash
+# Éditer le chemin utilisateur dans le service
+sudo sed -i 's/USERNAME/'"$(whoami)"'/g' facebook-media-ocr.service
+
+# Copier les fichiers systemd
+sudo cp facebook-media-ocr.service facebook-media-ocr.timer /etc/systemd/system/
+
+# Activer le timer
+sudo systemctl daemon-reload
+sudo systemctl enable facebook-media-ocr.timer
+sudo systemctl start facebook-media-ocr.timer
+
+# Vérifier
+sudo systemctl status facebook-media-ocr.timer
+systemctl list-timers --all | grep facebook
+```
+
+**Fonctionnement :**
+- Le timer déclenche le service **tous les lundis à 2h** (avec ±30min aléatoire)
+- Le service lance tous les groupes en parallèle (`&`) et attend la fin (`wait`)
+- Chaque groupe a son propre `state-{name}.json` : reprise automatique
+- Si un groupe est déjà en cours, l'ancien processus est tué avant relance
+
+**Logs :**
+```bash
+journalctl -u facebook-media-ocr.service          # Sortie du service
+tail -f logs-saisonniers.txt                       # Log individuel d'un groupe
+```
+
+**Désactiver :**
+```bash
+sudo systemctl stop facebook-media-ocr.timer
+sudo systemctl disable facebook-media-ocr.timer
 ```
 
 ### 6. Mise à jour du code
@@ -271,8 +285,13 @@ Ligne à ajouter :
 ```bash
 cd ~/FacebookMediaOcr
 git pull
-# Redémarrer les sessions screen si nécessaire
+
+# Redémarrer les sessions screen si utilisées
 screen -ls | grep -oP '\d+\.\S+' | while read s; do screen -S "$s" -X quit; done
+# Ou tuer les process systemd
+pkill -f fb_selenium.py
+
+# Relancer
 ./run_all.sh
 ```
 

@@ -1,0 +1,12 @@
+[Unit]
+Description=Facebook Media OCR - Group photo scraper (weekly)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/USERNAME/FacebookMediaOcr/run_all.sh --systemd
+WorkingDirectory=/home/USERNAME/FacebookMediaOcr
+User=USERNAME
+StandardOutput=journal
+StandardError=journal
