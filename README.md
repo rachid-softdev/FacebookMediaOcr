@@ -44,6 +44,11 @@ Afficher le navigateur (debug) :
 python fb_selenium.py --live --no-headless
 ```
 
+Changer de groupe (ID depuis l'URL) :
+```bash
+python fb_selenium.py --live --group-id 175831749464922
+```
+
 Pipeline :
 1. **GraphQL** (PowerShell) → récupère les fbid des photos (4000 max)
 2. **Selenium** → navigue sur chaque page photo, extrait l'URL full-résolution (og:image)

@@ -1158,11 +1158,14 @@ class FacebookScraper:
             return None
         fbids = []
         cursor = None
-        for _ in range(max_pages):
+        for page in range(1, max_pages + 1):
+            print(f"  [GraphQL page {page}]", end="", flush=True)
             entries, cursor = graphql_page(lsd, group_id, cursor)
             if not entries:
+                print(" empty")
                 break
             fbids.extend(e["fbid"] for e in entries)
+            print(f" +{len(entries)}")
             if not cursor:
                 break
         return fbids
@@ -1431,7 +1434,14 @@ def main():
                         help="Mode live : navigation photo + OCR page par page (full-res)")
     parser.add_argument("--no-headless", action="store_true",
                         help="Afficher le navigateur (desactiver headless)")
+    parser.add_argument("--group-id", metavar="ID",
+                        help="ID du groupe Facebook (defaut: 362347087928780)")
     args = parser.parse_args()
+
+    if args.group_id:
+        global GROUP_ID, GROUP_MEDIA_URL
+        GROUP_ID = args.group_id
+        GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
 
     if args.ocr_only:
         print("[*] Mode OCR seul")
