@@ -1,0 +1,12 @@
+.env
+download/
+debug/
+__pycache__/
+*.pyc
+*.pyo
+state.json
+emails.csv
+urls.json
+urls_graphql.json
+fb_cookies*.txt
+*.html

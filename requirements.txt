@@ -1,0 +1,7 @@
+python-dotenv>=1.0
+selenium>=4.15
+requests>=2.31
+pytesseract>=0.3
+opencv-python>=4.8
+Pillow>=10
+numpy>=1.24
