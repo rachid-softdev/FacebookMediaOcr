@@ -1,6 +1,3 @@
-# Format: nom:group_id
-# Les lignes commençant par # sont ignorées
-saisonniers:362347087928780
-indre:offres.d.emploi.indre
-ardennes:offres.d.emploi.ardennes
-jobenisere:jobenisere
+emploi01:927601630680870
+emploi08:1162293797121851
+emploi36:1704587393146296
