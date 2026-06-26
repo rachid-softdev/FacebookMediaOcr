@@ -264,9 +264,9 @@ systemctl list-timers --all | grep facebook
 
 **Fonctionnement :**
 - Le timer déclenche le service **tous les lundis à 2h** (avec ±30min aléatoire)
-- Le service lance tous les groupes en parallèle (`&`) et attend la fin (`wait`)
+- Le service tue d'abord les éventuels process `fb_selenium` encore en cours (`pkill -f`) avant de relancer — pas de doublon ni de conflit sur les fichiers
+- Ensuite il lance tous les groupes en parallèle (`&`) et attend la fin (`wait`)
 - Chaque groupe a son propre `state-{name}.json` : reprise automatique
-- Si un groupe est déjà en cours, l'ancien processus est tué avant relance
 
 **Logs :**
 ```bash
@@ -305,4 +305,40 @@ pkill -f fb_selenium.py
 | Erreur `Failed to create shared context` | Sans conséquence, lancer avec `--no-headless` pour voir |
 | `state.json` ne reprend pas au bon endroit | Supprimer `state-{name}.json` et relancer depuis le début |
 | Concurrence sur le ChromeDriver | Chaque instance Selenium lance son propre driver, sans conflit |
-| Processus zombie screen | `screen -wipe` pour nettoyer
+| Processus zombie screen | `screen -wipe` pour nettoyer |
+
+### 8. Parallélisation : limites et risques
+
+#### Rate limiting Facebook
+
+Chaque instance Selenium visite les pages photos avec **0.5s entre chaque requête**.
+Avec 4 groupes en parallèle, le trafic total est d'environ **2-3 requêtes/seconde**
+vers Facebook — ce qui reste très faible et **ne déclenche pas de rate limiting**
+dans la pratique.
+
+Points rassurants :
+- Le script ne fait **aucune action** (clic, like, commentaire) — que des `GET`
+- Les pages visitées sont **publiques** (pas de login, pas de session)
+- Le délai de 0.5s est déjà bien plus lent qu'un humain
+- Une exécution hebdomadaire laisse 7 jours entre deux runs
+
+Si vous voulez réduire encore le risque :
+
+```bash
+# Ajouter un délai plus long entre chaque photo (modifier fb_selenium.py)
+# Ligne 1283 : time.sleep(0.5) -> time.sleep(1.5)
+```
+
+#### Ressources VPS (RAM / CPU)
+
+Chaque instance Chrome headless consomme **~200-400 Mo de RAM**.
+
+| Groupes | RAM estimée | VPS recommandé |
+|---------|-------------|----------------|
+| 2-3     | ~1 Go       | 2 Go (minimum) |
+| 4-6     | ~2 Go       | 4 Go           |
+| 10+     | ~4 Go       | 8 Go           |
+
+Sur un VPS avec mémoire insuffisante, le kernel peut tuer des processus (OOM Killer).
+Solution : réduire le nombre de groupes simultanés dans `run_all.sh`, ou espacer
+les exécutions avec des timers décalés (ex: lundi 2h / mardi 2h / ...).
