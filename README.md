@@ -101,7 +101,7 @@ Stratégie :
 2. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
 3. Vérifie son existence via PowerShell
 4. Si trouvé → résout l'ID numérique
-5. Si absent → cherche sur DuckDuckGo (max 3 groupes par département)
+5. Si absent → cherche sur Bing (Google bloque les robots) — max 3 groupes
 6. Si rien trouvé → on passe au suivant (pas de blocage)
 
 Produit :

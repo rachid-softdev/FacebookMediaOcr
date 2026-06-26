@@ -70,13 +70,25 @@ try {{
     return "LSD" in out
 
 
-def search_duckduckgo(query, max_results=10):
+def search_web(query, max_results=10):
+    """Cherche sur Bing (Google bloque les robots) et retourne les URLs."""
+    headers = {
+        "User-Agent": UA + " (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
+    }
+    params = {"q": query, "count": str(max_results), "setlang": "fr-fr"}
     try:
-        from duckduckgo_search import DDGS
-        with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=max_results, region="fr-fr"))
-        return [r["href"] for r in results]
-    except Exception as e:
+        r = requests.get(
+            "https://www.bing.com/search",
+            params=params,
+            headers=headers,
+            timeout=15,
+        )
+        r.raise_for_status()
+        urls = re.findall(r'<a[^>]*href="(https?://[^"]+)"[^>]*>', r.text)
+        return [u for u in urls if "facebook.com/groups" in u]
+    except requests.RequestException as e:
         print(f"    ERR search: {e}")
         return []
 
@@ -144,7 +156,7 @@ def main():
             sys.stdout.write(", recherche...")
             sys.stdout.flush()
             query = f'facebook groupe offres d emploi {dept_num} {dept_name}'
-            urls = search_duckduckgo(query)
+            urls = search_web(query)
 
             seen = set()
             for url in urls:
