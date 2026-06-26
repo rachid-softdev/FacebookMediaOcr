@@ -265,7 +265,7 @@ systemctl list-timers --all | grep facebook
 **Fonctionnement :**
 - Le timer déclenche le service **tous les lundis à 2h** (avec ±30min aléatoire)
 - Le service tue d'abord les éventuels process `fb_selenium` encore en cours (`pkill -f`) avant de relancer — pas de doublon ni de conflit sur les fichiers
-- Ensuite il lance tous les groupes en parallèle (`&`) et attend la fin (`wait`)
+- `run_all.sh` détecte la RAM disponible et adapte le parallélisme : si la RAM est insuffisante pour tout lancer d'un coup, les groupes en attente démarrent automatiquement dès qu'une place se libère
 - Chaque groupe a son propre `state-{name}.json` : reprise automatique
 
 **Logs :**
@@ -329,16 +329,27 @@ Si vous voulez réduire encore le risque :
 # Ligne 1283 : time.sleep(0.5) -> time.sleep(1.5)
 ```
 
-#### Ressources VPS (RAM / CPU)
+#### RAM : adaptation automatique
 
-Chaque instance Chrome headless consomme **~200-400 Mo de RAM**.
+`run_all.sh` détecte la RAM totale du VPS via `/proc/meminfo` et limite le
+nombre d'instances lancées en parallèle :
 
-| Groupes | RAM estimée | VPS recommandé |
-|---------|-------------|----------------|
-| 2-3     | ~1 Go       | 2 Go (minimum) |
-| 4-6     | ~2 Go       | 4 Go           |
-| 10+     | ~4 Go       | 8 Go           |
+```
+RAM dispo = total - 512 Mo (marge système)
+max = RAM_dispo / 300 Mo (estimation par Chrome headless)
+```
 
-Sur un VPS avec mémoire insuffisante, le kernel peut tuer des processus (OOM Killer).
-Solution : réduire le nombre de groupes simultanés dans `run_all.sh`, ou espacer
-les exécutions avec des timers décalés (ex: lundi 2h / mardi 2h / ...).
+| RAM VPS | Max instances | Groupes simultanés |
+|---------|---------------|-------------------|
+| 2 Go    | 3             | 3 sur 4           |
+| 4 Go    | 11            | Tous (4)          |
+| 8 Go    | 25            | Tous (4)          |
+
+Si la RAM est insuffisante pour tout lancer d'un coup, les groupes en attente
+démarreront automatiquement dès qu'une place se libère (quand un groupe termine).
+
+Voir le calcul en direct dans les logs :
+
+```
+[date] RAM totale : 1982 Mo — Parallélisme max : 3
+```
