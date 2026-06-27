@@ -1177,10 +1177,12 @@ class FacebookScraper:
     # -- Pipeline live : GraphQL (PowerShell) -> navigation Selenium (full-res) -> OCR page par page
 
     @staticmethod
+    @staticmethod
     def _powershell_graphql_fbids(group_id, max_pages=500):
         """Récupère les URLs des photos via PowerShell + GraphQL (pas de login).
         Retourne une liste de dicts {"fbid": ..., "url": ...} ou None."""
-        from fb_graphql import powershell, fetch_lsd, graphql_page
+        import time as _time
+        from fb_graphql import fetch_lsd, graphql_page
         lsd, resolved_id = fetch_lsd(group_id)
         if not lsd:
             return None
@@ -1198,6 +1200,7 @@ class FacebookScraper:
             print(f" +{len(entries)}")
             if not cursor:
                 break
+            _time.sleep(1.0)
         return photos
 
     def _process_photo(self, fbid, url, session):
