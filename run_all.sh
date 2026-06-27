@@ -28,13 +28,13 @@ for entry in "${GROUP_ENTRIES[@]}"; do
 done
 
 # --- Détection RAM pour limiter le parallélisme ---
-# Chaque Chrome headless ~300 Mo. On garde 512 Mo de marge pour le système.
+# Chaque Chrome headless ~300 Mo. On utilise MemAvailable (RAM dispo reelle)
+# pour ne pas etouffer les autres services (kimaki, commune-scraper, etc.).
 total_ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 1024)
-max_parallel=$(( (total_ram_mb - 512) / 300 ))
-if [ "$max_parallel" -lt 1 ]; then
-  max_parallel=1
-fi
-echo "[$(date)] RAM totale : ${total_ram_mb} Mo — Parallélisme max : $max_parallel"
+avail_ram_mb=$(awk '/MemAvailable/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 512)
+max_parallel=$(( (avail_ram_mb - 1024) / 300 ))
+[ "$max_parallel" -lt 1 ] && max_parallel=1
+echo "[$(date)] RAM totale : ${total_ram_mb} Mo | disponible : ${avail_ram_mb} Mo | Parallélisme max : $max_parallel"
 
 launch_job() {
   local name="$1" gid="$2" mode="$3"
