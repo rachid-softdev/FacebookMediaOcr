@@ -55,7 +55,7 @@ count_running() {
   if [ "$mode" = "systemd" ]; then
     jobs -r 2>/dev/null | wc -l
   else
-    screen -ls 2>/dev/null | grep -cP '^\s+\d+' || true
+    screen -ls 2>/dev/null | grep -cP 'emploi\d+' || true
   fi
 }
 
