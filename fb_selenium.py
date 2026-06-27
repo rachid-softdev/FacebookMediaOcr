@@ -1368,84 +1368,6 @@ class FacebookScraper:
         email_count = sum(len(r["emails"]) for r in ocr_results)
         print(f"\n[OK] {email_count} email(s) -> {EMAILS_CSV}")
 
-    # -- Pipeline principal ---------------------------------
-
-    def run(self):
-        gname = f"grp{GROUP_ID}"
-        notify("debut", group=gname, script="fb_selenium")
-        state = load_state()
-
-        # Si un état existe, reprendre
-        if state and state.get("phase"):
-            print("[*] Reprise depuis l'état sauvegardé")
-            all_fbids = state.get("fbids", [])
-            processed = set(state.get("processed", []))
-            results = state.get("results", [])
-            phase = state.get("phase", "scroll")
-        else:
-            all_fbids = []
-            processed = set()
-            results = []
-            phase = "scroll"
-
-        try:
-            self.start_driver()
-
-            # Login (toujours nécessaire)
-            self.login()
-
-            # Phase 1 : Scroll (si pas encore fait ou incomplet)
-            if phase != "fetch" or not all_fbids:
-                all_fbids = self.scroll_media_page(state)
-                processed = set()
-                results = []
-                phase = "fetch"
-                state = {"phase": phase, "fbids": all_fbids, "processed": [], "results": []}
-                save_state(state)
-
-            # Phase 2 : Fetch URLs (GraphQL rapide, fallback Selenium)
-            # Note : GraphQL ne nécessite pas les fbids, il pagine directement
-            results = self.fetch_photo_urls_graphql(GROUP_ID)
-            if not results:
-                print("  -> Fallback : navigation Selenium")
-                results = []
-                self.fetch_photo_urls(all_fbids, processed, results, state)
-
-            # Nettoyer l'état après fetch réussi
-            clear_state()
-
-            # Phase 3 : Download
-            self.download_images(results)
-
-            # Phase 4 : OCR
-            self.run_ocr()
-
-            print(f"\n{'='*50}")
-            print("Pipeline terminé avec succès !")
-            print(f"{'='*50}")
-            print(f"  URLs     : {RESULTS_FILE}")
-            print(f"  Images   : {DOWNLOAD_DIR}/")
-            print(f"  Emails   : {EMAILS_CSV}")
-            notify("ok", group=gname, script="fb_selenium",
-                   data={"urls": RESULTS_FILE, "images": f"{DOWNLOAD_DIR}/", "emails": EMAILS_CSV})
-
-        except KeyboardInterrupt:
-            print("\n[!] Interrompu par l'utilisateur")
-            if state:
-                save_state(state)
-                print(f"    État sauvegardé dans {STATE_FILE}")
-            notify("info", group=gname, script="fb_selenium", data={"interrompu": True})
-        except Exception as e:
-            print(f"\n[!] Erreur : {e}")
-            if state:
-                save_state(state)
-                print(f"    État sauvegardé dans {STATE_FILE}")
-            notify("echec", group=gname, script="fb_selenium", error=str(e))
-            raise
-        finally:
-            self.close()
-
-
 # --- Entry point ----------------------------------------------
 
 def main():
@@ -1456,8 +1378,6 @@ def main():
     )
     parser.add_argument("--ocr-only", metavar="DOSSIER",
                         help="Lancer uniquement l'OCR sur un dossier d'images")
-    parser.add_argument("--live", action="store_true",
-                        help="Mode live : navigation photo + OCR page par page (full-res)")
     parser.add_argument("--no-headless", action="store_true",
                         help="Afficher le navigateur (desactiver headless)")
     parser.add_argument("--group-id", metavar="ID",
@@ -1487,10 +1407,7 @@ def main():
     scraper = FacebookScraper()
     if args.no_headless:
         scraper.no_headless = True
-    if args.live:
-        scraper.run_live()
-    else:
-        scraper.run()
+    scraper.run_live()
 
 
 if __name__ == "__main__":
