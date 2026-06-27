@@ -72,8 +72,10 @@ def powershell(script, timeout=30):
         "-Command", script
     ]
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        return r.stdout, r.stderr, r.returncode
+        r = subprocess.run(cmd, capture_output=True, text=False, timeout=timeout)
+        stdout = r.stdout.decode("utf-8", errors="replace") if r.stdout else ""
+        stderr = r.stderr.decode("utf-8", errors="replace") if r.stderr else ""
+        return stdout, stderr, r.returncode
     except subprocess.TimeoutExpired:
         return "", "TIMEOUT", -1
     except FileNotFoundError:
@@ -126,6 +128,7 @@ try {{
     for pat in [
         r'"groupID":"(\d+)"',
         r'"group_id":"(\d+)"',
+        r'"entity_id":"(\d+)"',
         r'fb://group/?id=(\d+)',
     ]:
         m = re.search(pat, out)

@@ -1,21 +1,14 @@
 #!/usr/bin/env python3
 """
 Discover Facebook job groups for each French department.
-Strategy:
-  1. Generer le slug attendu : offres.d.emploi.{departement_normalise}
-  2. Verifier si le groupe existe (fetch PowerShell)
-  3. Si oui -> resoudre l'ID numerique via fetch_lsd
-  4. Si non -> recherche DuckDuckGo pour trouver d'autres groupes (max 3)
-  5. Si rien trouve -> on passe au suivant
 
-Sources :
-  - departements.json : liste des departements
-  - groups.txt        : groupes trouves (format name:group_id)
-  - groups.json       : groupes trouves (format detaillie, avec URL)
+Pour chaque departement : tente le pattern `offres.d.emploi.{slug}`,
+verifie que la page existe, extrait l'ID numerique, et verifie que
+l'API GraphQL repond (photos publiques accessibles).
 
 Usage:
     python discover_groups.py                  # Tous les departements
-    python discover_groups.py --dept 01 02 03  # Departements specifiques
+    python discover_groups.py --dept 75 92 93  # Departements specifiques
     python discover_groups.py --dry-run        # Simulation seulement
 """
 
@@ -24,18 +17,17 @@ import time
 import re
 import json
 import argparse
-import unicodedata
-import requests
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from fb_graphql import fetch_lsd
+from fb_graphql import fetch_lsd, powershell, UA
 
-UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+PATTERNS = [
+    "offres.d.emploi.{slug}",
+]
 
 
 def load_departements():
-    """Charge la liste des departements depuis departements.json."""
     path = Path(__file__).parent / "departements.json"
     if not path.exists():
         print(f"[!] {path} introuvable")
@@ -44,15 +36,26 @@ def load_departements():
         return json.load(f)
 
 
-def slugify(name):
-    nfkd = unicodedata.normalize("NFKD", name)
-    ascii_val = nfkd.encode("ascii", "ignore").decode("ascii")
-    return ascii_val.lower().replace(" ", ".")
+def dept_slug(nom):
+    s = nom.lower().strip()
+    replacements = {
+        " ": "-", "'": "-", "(": "", ")": "",
+        "\u00e9": "e", "\u00e8": "e", "\u00ea": "e", "\u00eb": "e",
+        "\u00e0": "a", "\u00e2": "a",
+        "\u00f9": "u", "\u00fb": "u",
+        "\u00f4": "o", "\u00f6": "o",
+        "\u00ee": "i", "\u00ef": "i",
+        "\u00e7": "c",
+    }
+    for old, new in replacements.items():
+        s = s.replace(old, new)
+    s = re.sub(r"-+", "-", s)
+    s = s.strip("-")
+    return s
 
 
 def group_exists(slug):
-    """Verifie si un groupe Facebook existe via PowerShell."""
-    from fb_graphql import powershell
+    """Verifie que la page Facebook du groupe est accessible (LSD)."""
     url = f"https://www.facebook.com/groups/{slug}/media"
     ps = f'''
 $ua = "{UA}"
@@ -65,49 +68,101 @@ try {{
 }}
 '''
     out, _, _ = powershell(ps, timeout=20)
-    if "__POWERSHELL_ERROR__" in out[:100]:
+    if not out or "__POWERSHELL_ERROR__" in out[:100]:
         return False
     return "LSD" in out
 
 
-def search_web(query, max_results=10):
-    """Cherche sur Bing (Google bloque les robots) et retourne les URLs."""
-    headers = {
-        "User-Agent": UA + " (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
-        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        "Accept-Language": "fr-FR,fr;q=0.9,en;q=0.8",
-    }
-    params = {"q": query, "count": str(max_results), "setlang": "fr-fr"}
-    try:
-        r = requests.get(
-            "https://www.bing.com/search",
-            params=params,
-            headers=headers,
-            timeout=15,
-        )
-        r.raise_for_status()
-        urls = re.findall(r'<a[^>]*href="(https?://[^"]+)"[^>]*>', r.text)
-        return [u for u in urls if "facebook.com/groups" in u]
-    except requests.RequestException as e:
-        print(f"    ERR search: {e}")
-        return []
-
-
-def extract_group_slug(url):
-    m = re.search(r'(?:www\.)?facebook\.com/groups/([^/\?#]+)', url)
-    return m.group(1) if m else None
-
-
 def resolve_group_id(slug):
+    """Resout l'ID numerique du groupe via fetch_lsd."""
+
+    if slug.isdigit():
+        return slug
     _, resolved = fetch_lsd(slug)
+    if not resolved or resolved == slug:
+        return None
     return resolved
 
 
+def graphql_works(lsd, group_id):
+    """Verifie que l'API GraphQL repond avec des photos pour ce groupe."""
+    variables_json = json.dumps({
+        "count": 1, "cursor": None, "scale": 1, "id": str(group_id),
+    }, separators=(",", ":"))
+
+    ps = f'''
+$variables = '{variables_json}'
+$body = @{{
+    lsd = '{lsd}'
+    fb_api_caller_class = 'RelayModern'
+    fb_api_req_friendly_name = 'GroupsCometMediaPhotosTabGridQuery'
+    server_timestamps = 'true'
+    variables = $variables
+    doc_id = '26680580074858996'
+}}
+$r = Invoke-WebRequest -Uri 'https://www.facebook.com/api/graphql/' -Method POST -Body $body -UserAgent '{UA}' -MaximumRedirection 0 -TimeoutSec 15 -UseBasicParsing
+Write-Output $r.Content
+'''
+    out, _, code = powershell(ps, timeout=20)
+    if code != 0 or not out.strip():
+        return False
+    if out.startswith("for (;;);"):
+        out = out[len("for (;;);"):]
+    try:
+        result = json.loads(out)
+        node = result.get("data", {}).get("node")
+        if node and node.get("group_mediaset"):
+            return True
+    except (json.JSONDecodeError, AttributeError):
+        pass
+    return False
+
+
+def try_slug(dept_num, dept_name, slug):
+    """Tente le pattern, verifie existence + ID + GraphQL."""
+    for pat in PATTERNS:
+        group_slug = pat.format(slug=slug)
+        print(f"  Pattern: {group_slug} ... ", end="", flush=True)
+
+        if not group_exists(group_slug):
+            print("inaccessible")
+            continue
+
+        lsd, gid = fetch_lsd(group_slug)
+        if not lsd:
+            print("LSD absent")
+            continue
+        if not gid or gid == group_slug:
+            print("ID non resoluble")
+            continue
+
+        print(f"ID={gid} ... ", end="", flush=True)
+
+        if not graphql_works(lsd, gid):
+            print("GraphQL echoue (photos non publiques)")
+            continue
+
+        print("OK")
+
+        return {
+            "name": f"emploi{dept_num}",
+            "group_id": gid,
+            "slug": group_slug,
+            "url": f"https://www.facebook.com/groups/{group_slug}",
+            "dept_num": dept_num,
+            "dept_name": dept_name,
+            "source": "pattern",
+        }
+    return None
+
+
 def main():
-    parser = argparse.ArgumentParser(description="Decouvre les groupes Facebook Offres d'emploi par departement")
+    parser = argparse.ArgumentParser(
+        description="Decouvre les groupes Facebook Offres d'emploi par departement"
+    )
     parser.add_argument("--dept", nargs="+", help="Departements specifiques (ex: 01 02 03)")
     parser.add_argument("--dry-run", action="store_true", help="Simulation seulement")
-    parser.add_argument("--delay", type=float, default=1.0, help="Delai entre chaque departement (defaut: 1s)")
+    parser.add_argument("--delay", type=float, default=0.5, help="Delai entre chaque (defaut: 0.5s)")
     args = parser.parse_args()
 
     depts = load_departements()
@@ -115,113 +170,55 @@ def main():
         depts = [d for d in depts if d["num"] in args.dept]
 
     results = []
-    pattern_found = 0
-    search_found = 0
-    empty_depts = 0
+    found = 0
+    empty = 0
 
     for dept in depts:
         dept_num = dept["num"]
         dept_name = dept["nom"]
-        expected_slug = f"offres.d.emploi.{slugify(dept_name)}"
-        name = f"emploi{dept_num}"
+        slug = dept_slug(dept_name)
 
-        print(f"\n[{dept_num}] {dept_name}", end="", flush=True)
-        sys.stdout.write(f" -> {expected_slug}")
-        sys.stdout.flush()
-        time.sleep(0.3)
+        print(f"\n[{dept_num}] {dept_name}  ({slug})")
 
-        found = False
-
-        # Etape 1 : pattern
-        if group_exists(expected_slug):
-            gid = resolve_group_id(expected_slug)
-            if gid:
-                results.append({
-                    "name": name,
-                    "group_id": gid,
-                    "slug": expected_slug,
-                    "url": f"https://www.facebook.com/groups/{expected_slug}",
-                    "dept_num": dept_num,
-                    "dept_name": dept_name,
-                    "source": "pattern",
-                })
-                pattern_found += 1
-                found = True
-                print(f" OK -> {gid}")
+        result = try_slug(dept_num, dept_name, slug)
+        if result:
+            gid = result["group_id"]
+            existing = [r for r in results if r["group_id"] == gid]
+            if existing:
+                print(f"  => ID {gid} deja utilise par {existing[0]['dept_name']} (ignore)")
+                empty += 1
+                continue
+            results.append(result)
+            found += 1
+            print(f"  => {gid}")
         else:
-            print(" absent", end="")
+            empty += 1
+            print(f"  => [echec]")
 
-        # Etape 2 : fallback DuckDuckGo
-        if not found:
-            sys.stdout.write(", recherche...")
-            sys.stdout.flush()
-            query = f'facebook groupe offres d emploi {dept_num} {dept_name}'
-            urls = search_web(query)
-
-            seen = set()
-            for url in urls:
-                if len([r for r in results if r["dept_num"] == dept_num]) >= 3:
-                    break
-                slug = extract_group_slug(url)
-                if not slug or slug in seen:
-                    continue
-                seen.add(slug)
-
-                sys.stdout.write(f" check {slug}...")
-                sys.stdout.flush()
-
-                gid = resolve_group_id(slug)
-                if gid:
-                    results.append({
-                        "name": name,
-                        "group_id": gid,
-                        "slug": slug,
-                        "url": f"https://www.facebook.com/groups/{slug}",
-                        "dept_num": dept_num,
-                        "dept_name": dept_name,
-                        "source": "search",
-                    })
-                    search_found += 1
-                    found = True
-                    print(f" -> {gid}")
-                    time.sleep(0.5)
-                else:
-                    print(" echec", end="")
-
-        if not found:
-            empty_depts += 1
-            print(" rien")
+        if not args.dry_run:
+            Path("groups.txt").write_text(
+                "\n".join(f"{r['name']}:{r['group_id']}" for r in results) + "\n",
+                encoding="utf-8",
+            )
+            Path("groups.json").write_text(
+                json.dumps(results, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
 
         time.sleep(args.delay)
 
-    # Ecriture des fichiers de sortie
     print(f"\n{'='*50}")
-    print(f"Pattern OK : {pattern_found}")
-    print(f"Search OK  : {search_found}")
-    print(f"Sans groupe: {empty_depts}")
-    print(f"Total      : {len(results)} groupes")
+    print(f"OK     : {found}")
+    print(f"Echec  : {empty}")
+    print(f"Total  : {len(results)} / {len(depts)}")
 
     if args.dry_run:
-        print(f"\n--- groups.txt ---")
+        print("\n--- groups.txt ---")
         for r in results:
             print(f"{r['name']}:{r['group_id']}")
-        print(f"\n--- groups.json ---")
-        print(json.dumps(results, ensure_ascii=False, indent=2))
-        return
 
-    # groups.txt : format name:group_id (backward compat run_all.sh)
-    Path("groups.txt").write_text(
-        "\n".join(f"{r['name']}:{r['group_id']}" for r in results) + "\n",
-        encoding="utf-8",
-    )
-    print(f"Ecris dans groups.txt")
-
-    # groups.json : format detaille avec URLs
-    Path("groups.json").write_text(
-        json.dumps(results, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
-    print(f"Ecris dans groups.json")
+    else:
+        print(f"Fichiers: groups.txt ({len(results)} lignes), groups.json")
 
 
 if __name__ == "__main__":

@@ -1,0 +1,731 @@
+[
+  {
+    "name": "emploi01",
+    "group_id": "927601630680870",
+    "slug": "offres.d.emploi.ain",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.ain",
+    "dept_num": "01",
+    "dept_name": "Ain",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi02",
+    "group_id": "178149959231603",
+    "slug": "offres.d.emploi.aisne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.aisne",
+    "dept_num": "02",
+    "dept_name": "Aisne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi03",
+    "group_id": "994632470648681",
+    "slug": "offres.d.emploi.allier",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.allier",
+    "dept_num": "03",
+    "dept_name": "Allier",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi04",
+    "group_id": "988670521208054",
+    "slug": "offres.d.emploi.alpes-de-haute-provence",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.alpes-de-haute-provence",
+    "dept_num": "04",
+    "dept_name": "Alpes-de-Haute-Provence",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi05",
+    "group_id": "343487155775739",
+    "slug": "offres.d.emploi.hautes-alpes",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.hautes-alpes",
+    "dept_num": "05",
+    "dept_name": "Hautes-Alpes",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi07",
+    "group_id": "1121281444550210",
+    "slug": "offres.d.emploi.ardeche",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.ardeche",
+    "dept_num": "07",
+    "dept_name": "Ardèche",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi08",
+    "group_id": "1162293797121851",
+    "slug": "offres.d.emploi.ardennes",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.ardennes",
+    "dept_num": "08",
+    "dept_name": "Ardennes",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi09",
+    "group_id": "1715762832044169",
+    "slug": "offres.d.emploi.ariege",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.ariege",
+    "dept_num": "09",
+    "dept_name": "Ariège",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi10",
+    "group_id": "535992846561489",
+    "slug": "offres.d.emploi.aube",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.aube",
+    "dept_num": "10",
+    "dept_name": "Aube",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi11",
+    "group_id": "739640026137453",
+    "slug": "offres.d.emploi.aude",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.aude",
+    "dept_num": "11",
+    "dept_name": "Aude",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi12",
+    "group_id": "1682830271992121",
+    "slug": "offres.d.emploi.aveyron",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.aveyron",
+    "dept_num": "12",
+    "dept_name": "Aveyron",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi14",
+    "group_id": "1569506116709700",
+    "slug": "offres.d.emploi.calvados",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.calvados",
+    "dept_num": "14",
+    "dept_name": "Calvados",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi16",
+    "group_id": "1525841134383982",
+    "slug": "offres.d.emploi.charente",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.charente",
+    "dept_num": "16",
+    "dept_name": "Charente",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi17",
+    "group_id": "1133473620030057",
+    "slug": "offres.d.emploi.charente-maritime",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.charente-maritime",
+    "dept_num": "17",
+    "dept_name": "Charente-Maritime",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi18",
+    "group_id": "600724413427047",
+    "slug": "offres.d.emploi.cher",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.cher",
+    "dept_num": "18",
+    "dept_name": "Cher",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi19",
+    "group_id": "532020180306558",
+    "slug": "offres.d.emploi.correze",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.correze",
+    "dept_num": "19",
+    "dept_name": "Corrèze",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi21",
+    "group_id": "1251111241566553",
+    "slug": "offres.d.emploi.cote-d-or",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.cote-d-or",
+    "dept_num": "21",
+    "dept_name": "Côte-d'Or",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi22",
+    "group_id": "1668506886757396",
+    "slug": "offres.d.emploi.cotes-d-armor",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.cotes-d-armor",
+    "dept_num": "22",
+    "dept_name": "Côtes-d'Armor",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi23",
+    "group_id": "1577159482606944",
+    "slug": "offres.d.emploi.creuse",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.creuse",
+    "dept_num": "23",
+    "dept_name": "Creuse",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi24",
+    "group_id": "1724677994440366",
+    "slug": "offres.d.emploi.dordogne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.dordogne",
+    "dept_num": "24",
+    "dept_name": "Dordogne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi26",
+    "group_id": "488609054674762",
+    "slug": "offres.d.emploi.drome",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.drome",
+    "dept_num": "26",
+    "dept_name": "Drôme",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi27",
+    "group_id": "737993779635164",
+    "slug": "offres.d.emploi.eure",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.eure",
+    "dept_num": "27",
+    "dept_name": "Eure",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi28",
+    "group_id": "882521431862516",
+    "slug": "offres.d.emploi.eure-et-loir",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.eure-et-loir",
+    "dept_num": "28",
+    "dept_name": "Eure-et-Loir",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi29",
+    "group_id": "862954860494251",
+    "slug": "offres.d.emploi.finistere",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.finistere",
+    "dept_num": "29",
+    "dept_name": "Finistère",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi31",
+    "group_id": "942977245798452",
+    "slug": "offres.d.emploi.haute-garonne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haute-garonne",
+    "dept_num": "31",
+    "dept_name": "Haute-Garonne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi32",
+    "group_id": "179609902418500",
+    "slug": "offres.d.emploi.gers",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.gers",
+    "dept_num": "32",
+    "dept_name": "Gers",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi33",
+    "group_id": "1507815489525826",
+    "slug": "offres.d.emploi.gironde",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.gironde",
+    "dept_num": "33",
+    "dept_name": "Gironde",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi34",
+    "group_id": "198757957148058",
+    "slug": "offres.d.emploi.herault",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.herault",
+    "dept_num": "34",
+    "dept_name": "Hérault",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi35",
+    "group_id": "1704127686493974",
+    "slug": "offres.d.emploi.ille-et-vilaine",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.ille-et-vilaine",
+    "dept_num": "35",
+    "dept_name": "Ille-et-Vilaine",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi36",
+    "group_id": "1704587393146296",
+    "slug": "offres.d.emploi.indre",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.indre",
+    "dept_num": "36",
+    "dept_name": "Indre",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi38",
+    "group_id": "1710463942502844",
+    "slug": "offres.d.emploi.isere",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.isere",
+    "dept_num": "38",
+    "dept_name": "Isère",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi39",
+    "group_id": "818071811654142",
+    "slug": "offres.d.emploi.jura",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.jura",
+    "dept_num": "39",
+    "dept_name": "Jura",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi40",
+    "group_id": "1662892023965216",
+    "slug": "offres.d.emploi.landes",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.landes",
+    "dept_num": "40",
+    "dept_name": "Landes",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi41",
+    "group_id": "756324624503428",
+    "slug": "offres.d.emploi.loir-et-cher",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.loir-et-cher",
+    "dept_num": "41",
+    "dept_name": "Loir-et-Cher",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi42",
+    "group_id": "957267937676231",
+    "slug": "offres.d.emploi.loire",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.loire",
+    "dept_num": "42",
+    "dept_name": "Loire",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi43",
+    "group_id": "456763931189898",
+    "slug": "offres.d.emploi.haute-loire",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haute-loire",
+    "dept_num": "43",
+    "dept_name": "Haute-Loire",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi45",
+    "group_id": "1160568660643227",
+    "slug": "offres.d.emploi.loiret",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.loiret",
+    "dept_num": "45",
+    "dept_name": "Loiret",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi46",
+    "group_id": "1714493065463359",
+    "slug": "offres.d.emploi.lot",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.lot",
+    "dept_num": "46",
+    "dept_name": "Lot",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi47",
+    "group_id": "1174847805858542",
+    "slug": "offres.d.emploi.lot-et-garonne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.lot-et-garonne",
+    "dept_num": "47",
+    "dept_name": "Lot-et-Garonne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi48",
+    "group_id": "959816334110370",
+    "slug": "offres.d.emploi.lozere",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.lozere",
+    "dept_num": "48",
+    "dept_name": "Lozère",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi49",
+    "group_id": "1568649040119594",
+    "slug": "offres.d.emploi.maine-et-loire",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.maine-et-loire",
+    "dept_num": "49",
+    "dept_name": "Maine-et-Loire",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi50",
+    "group_id": "1964232867135735",
+    "slug": "offres.d.emploi.manche",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.manche",
+    "dept_num": "50",
+    "dept_name": "Manche",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi51",
+    "group_id": "914573058663568",
+    "slug": "offres.d.emploi.marne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.marne",
+    "dept_num": "51",
+    "dept_name": "Marne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi52",
+    "group_id": "1656778654585853",
+    "slug": "offres.d.emploi.haute-marne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haute-marne",
+    "dept_num": "52",
+    "dept_name": "Haute-Marne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi53",
+    "group_id": "249714385362667",
+    "slug": "offres.d.emploi.mayenne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.mayenne",
+    "dept_num": "53",
+    "dept_name": "Mayenne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi54",
+    "group_id": "226404134375114",
+    "slug": "offres.d.emploi.meurthe-et-moselle",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.meurthe-et-moselle",
+    "dept_num": "54",
+    "dept_name": "Meurthe-et-Moselle",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi55",
+    "group_id": "1564879263822627",
+    "slug": "offres.d.emploi.meuse",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.meuse",
+    "dept_num": "55",
+    "dept_name": "Meuse",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi56",
+    "group_id": "1564733620508733",
+    "slug": "offres.d.emploi.morbihan",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.morbihan",
+    "dept_num": "56",
+    "dept_name": "Morbihan",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi58",
+    "group_id": "245134515821425",
+    "slug": "offres.d.emploi.nievre",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.nievre",
+    "dept_num": "58",
+    "dept_name": "Nièvre",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi60",
+    "group_id": "786971838114592",
+    "slug": "offres.d.emploi.oise",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.oise",
+    "dept_num": "60",
+    "dept_name": "Oise",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi61",
+    "group_id": "1571656323150545",
+    "slug": "offres.d.emploi.orne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.orne",
+    "dept_num": "61",
+    "dept_name": "Orne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi62",
+    "group_id": "1090189961002141",
+    "slug": "offres.d.emploi.pas-de-calais",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.pas-de-calais",
+    "dept_num": "62",
+    "dept_name": "Pas-de-Calais",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi63",
+    "group_id": "554418564731778",
+    "slug": "offres.d.emploi.puy-de-dome",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.puy-de-dome",
+    "dept_num": "63",
+    "dept_name": "Puy-de-Dôme",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi64",
+    "group_id": "1566060747043645",
+    "slug": "offres.d.emploi.pyrenees-atlantiques",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.pyrenees-atlantiques",
+    "dept_num": "64",
+    "dept_name": "Pyrénées-Atlantiques",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi65",
+    "group_id": "254150661583152",
+    "slug": "offres.d.emploi.hautes-pyrenees",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.hautes-pyrenees",
+    "dept_num": "65",
+    "dept_name": "Hautes-Pyrénées",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi66",
+    "group_id": "501754880007845",
+    "slug": "offres.d.emploi.pyrenees-orientales",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.pyrenees-orientales",
+    "dept_num": "66",
+    "dept_name": "Pyrénées-Orientales",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi68",
+    "group_id": "568399403309725",
+    "slug": "offres.d.emploi.haut-rhin",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haut-rhin",
+    "dept_num": "68",
+    "dept_name": "Haut-Rhin",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi69",
+    "group_id": "1041031762609291",
+    "slug": "offres.d.emploi.rhone",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.rhone",
+    "dept_num": "69",
+    "dept_name": "Rhône",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi70",
+    "group_id": "575701445917632",
+    "slug": "offres.d.emploi.haute-saone",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haute-saone",
+    "dept_num": "70",
+    "dept_name": "Haute-Saône",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi71",
+    "group_id": "1259668597394949",
+    "slug": "offres.d.emploi.saone-et-loire",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.saone-et-loire",
+    "dept_num": "71",
+    "dept_name": "Saône-et-Loire",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi72",
+    "group_id": "1051957808199908",
+    "slug": "offres.d.emploi.sarthe",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.sarthe",
+    "dept_num": "72",
+    "dept_name": "Sarthe",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi73",
+    "group_id": "503205506531369",
+    "slug": "offres.d.emploi.savoie",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.savoie",
+    "dept_num": "73",
+    "dept_name": "Savoie",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi74",
+    "group_id": "1696645703947932",
+    "slug": "offres.d.emploi.haute-savoie",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haute-savoie",
+    "dept_num": "74",
+    "dept_name": "Haute-Savoie",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi75",
+    "group_id": "1769996206557276",
+    "slug": "offres.d.emploi.paris",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.paris",
+    "dept_num": "75",
+    "dept_name": "Paris",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi76",
+    "group_id": "175831749464922",
+    "slug": "offres.d.emploi.seine-maritime",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.seine-maritime",
+    "dept_num": "76",
+    "dept_name": "Seine-Maritime",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi77",
+    "group_id": "1674121066201595",
+    "slug": "offres.d.emploi.seine-et-marne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.seine-et-marne",
+    "dept_num": "77",
+    "dept_name": "Seine-et-Marne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi78",
+    "group_id": "1702300076718708",
+    "slug": "offres.d.emploi.yvelines",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.yvelines",
+    "dept_num": "78",
+    "dept_name": "Yvelines",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi79",
+    "group_id": "109846139409616",
+    "slug": "offres.d.emploi.deux-sevres",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.deux-sevres",
+    "dept_num": "79",
+    "dept_name": "Deux-Sèvres",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi80",
+    "group_id": "643817769089497",
+    "slug": "offres.d.emploi.somme",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.somme",
+    "dept_num": "80",
+    "dept_name": "Somme",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi81",
+    "group_id": "191698901197974",
+    "slug": "offres.d.emploi.tarn",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.tarn",
+    "dept_num": "81",
+    "dept_name": "Tarn",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi82",
+    "group_id": "963900430354772",
+    "slug": "offres.d.emploi.tarn-et-garonne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.tarn-et-garonne",
+    "dept_num": "82",
+    "dept_name": "Tarn-et-Garonne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi84",
+    "group_id": "1148127361878314",
+    "slug": "offres.d.emploi.vaucluse",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.vaucluse",
+    "dept_num": "84",
+    "dept_name": "Vaucluse",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi85",
+    "group_id": "877067945772536",
+    "slug": "offres.d.emploi.vendee",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.vendee",
+    "dept_num": "85",
+    "dept_name": "Vendée",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi87",
+    "group_id": "1670215226577741",
+    "slug": "offres.d.emploi.haute-vienne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.haute-vienne",
+    "dept_num": "87",
+    "dept_name": "Haute-Vienne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi88",
+    "group_id": "948910965229930",
+    "slug": "offres.d.emploi.vosges",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.vosges",
+    "dept_num": "88",
+    "dept_name": "Vosges",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi89",
+    "group_id": "570128246497248",
+    "slug": "offres.d.emploi.yonne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.yonne",
+    "dept_num": "89",
+    "dept_name": "Yonne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi90",
+    "group_id": "1081411631911319",
+    "slug": "offres.d.emploi.territoire-de-belfort",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.territoire-de-belfort",
+    "dept_num": "90",
+    "dept_name": "Territoire de Belfort",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi91",
+    "group_id": "191065797931532",
+    "slug": "offres.d.emploi.essonne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.essonne",
+    "dept_num": "91",
+    "dept_name": "Essonne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi92",
+    "group_id": "639550662850503",
+    "slug": "offres.d.emploi.hauts-de-seine",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.hauts-de-seine",
+    "dept_num": "92",
+    "dept_name": "Hauts-de-Seine",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi94",
+    "group_id": "231919243818899",
+    "slug": "offres.d.emploi.val-de-marne",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.val-de-marne",
+    "dept_num": "94",
+    "dept_name": "Val-de-Marne",
+    "source": "pattern"
+  },
+  {
+    "name": "emploi95",
+    "group_id": "196394977394269",
+    "slug": "offres.d.emploi.val-d-oise",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.val-d-oise",
+    "dept_num": "95",
+    "dept_name": "Val-d'Oise",
+    "source": "pattern"
+  }
+]
