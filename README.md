@@ -1,6 +1,8 @@
 # Facebook Group Photo Scraper + OCR
 
 Scrape les photos d'un groupe Facebook public et extrait les emails par OCR.
+Les requêtes GraphQL passent par **Tor SOCKS** (`socks5://127.0.0.1:9050`)
+pour éviter le rate limiting Facebook par IP.
 
 ## Prérequis
 
@@ -23,7 +25,7 @@ sudo apt update && sudo apt install google-chrome-stable
 sudo apt install chromium-chromedriver tesseract-ocr tesseract-ocr-fra pwsh tor
 
 # Python
-pip install selenium opencv-python numpy pytesseract Pillow requests
+pip install selenium opencv-python numpy pytesseract Pillow requests requests[socks]
 ```
 
 ### Les deux plateformes
@@ -57,13 +59,16 @@ python fb_selenium.py --name ardennes --group-id offres.d.emploi.ardennes
 Produit : `state-{name}.json`, `emails-{name}.csv`, `download-{name}/` — pas de conflit.
 
 Pipeline :
-1. **GraphQL** (PowerShell → LSD + résolution ID)
-2. **GraphQL via Tor SOCKS** (Python requests → fbid + URL full-résolution)
+1. **LSD token** : récupéré via PowerShell ou requests (selon `LD_PRELOAD`)
+2. **GraphQL via Tor SOCKS** (Python requests → fbid + URL full-résolution, `scale=10`)
 3. **Download** → télécharge l'image (requests, pas de Selenium)
 4. **OCR** → prétraitement OpenCV → Tesseract → emails + raw_text
 
-> Les requêtes GraphQL passent par **Tor SOCKS** (`socks5h://127.0.0.1:9050`)
+> Les requêtes GraphQL passent par **Tor SOCKS** (`socks5://127.0.0.1:9050`)
 > pour éviter le rate limiting Facebook par IP.
+> 
+> `LD_PRELOAD` (torsocks) est désactivé dans `run_all.sh` car il bloque
+> les connexions SOCKS locales et PowerShell.
 
 **Reprise après interruption** : voir section [Reprise après interruption](#9-reprise-après-interruption) plus bas.
 
@@ -122,7 +127,7 @@ Schema extrait par l'IA :
 Le CSV de sortie (`emails-{name}.csv`) contient une colonne `raw_text` avec le texte OCR brut,
 permettant un re-traitement sans re-télécharger les images.
 
-### GraphQL seul (PowerShell, sans Selenium)
+### GraphQL seul via Tor SOCKS
 ```bash
 python fb_graphql.py <group_id> --pages 50
 ```
@@ -194,7 +199,8 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 ## Structure
 ```
 fb_selenium.py              # Script principal (Selenium + GraphQL + OCR)
-fb_graphql.py               # GraphQL standalone (PowerShell)
+fb_graphql.py               # GraphQL standalone (Tor SOCKS)
+fb_doc_id.py                # Auto-découverte du doc_id GraphQL (Selenium + CDP)
 discover_groups.py          # Decouverte auto des groupes par departement
 notify.py                   # Notifications Discord (webhook)
 departements.json           # Liste des 101 departements (source discover)
@@ -203,6 +209,8 @@ groups.txt                  # Groupes trouves (format name:group_id)
 groups.json                 # Groupes trouves (format detaille avec URL)
 run_all.sh                  # Lancement parallele (lit groups.txt)
 enrich.py                   # Enrichissement OCR par IA (nom, prenom, tel, ville...)
+fb_doc_id.py                # Auto-découverte du doc_id GraphQL (Selenium + CDP)
+AGENTS.md                   # Documentation technique (context memory)
 facebook-media-ocr.service   # Unite systemd pour le service
 facebook-media-ocr.timer     # Timer systemd (tous les lundis 2h)
 facebook-media-ocr.logrotate # Rotation des logs (logrotate)
@@ -237,7 +245,7 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl
 sudo apt update && sudo apt install -y google-chrome-stable
 
 # Dépendances système
-sudo apt install -y chromium-chromedriver tesseract-ocr tesseract-ocr-fra pwsh git screen
+sudo apt install -y chromium-chromedriver tesseract-ocr tesseract-ocr-fra pwsh git screen tor
 
 # Python + pip
 sudo apt install -y python3 python3-pip python3-venv
@@ -256,6 +264,7 @@ google-chrome --version                                    # Chrome 149+
 chromedriver --version                                     # ChromeDriver 149+
 tesseract --version                                        # Tesseract + fra
 pwsh --version                                             # PowerShell Core 7+
+tor --version                                              # Tor (SOCKS proxy)
 python3 -c "import selenium, cv2, pytesseract, requests; print('OK')"
 ```
 
@@ -436,7 +445,7 @@ pkill -f fb_selenium.py
 
 #### Rate limiting Facebook
 
-Les requêtes GraphQL passent par **Tor SOCKS** (`socks5h://127.0.0.1:9050`)
+Les requêtes GraphQL passent par **Tor SOCKS** (`socks5://127.0.0.1:9050`)
 pour éviter le rate limiting IP de Facebook. Un délai de **1s entre chaque page**
 GraphQL est appliqué. Le téléchargement des images se fait avec **0.5s entre
 chaque photo**.
@@ -444,8 +453,20 @@ chaque photo**.
 #### Parallélisme
 
 Par défaut, `run_all.sh` lance **2 groupes à la fois** (`--parallel=2`).
-Surchargeable avec `--parallel=N`. Ce n'est plus basé sur la RAM car le mode
+Surchargeable avec `--parallel=N`. Le parallélisme est fixe car le mode
 live n'utilise pas Selenium (pas de Chrome headless lourd).
+
+#### Problème LD_PRELOAD / torsocks
+
+Si torsocks est actif globalement (`LD_PRELOAD`), il bloque les connexions
+SOCKS locales (`127.0.0.1:9050`) et PowerShell. `run_all.sh` le désactive
+automatiquement via `unset LD_PRELOAD`.
+
+#### Doc_id Facebook
+
+Le `doc_id` de l'API GraphQL Facebook change périodiquement. `fb_doc_id.py`
+le détecte automatiquement via Selenium + CDP et met à jour tous les
+fichiers. Lancé automatiquement au début de `run_all.sh`.
 
 ### 9. Reprise après interruption
 
