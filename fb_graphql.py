@@ -71,8 +71,10 @@ def powershell(script, timeout=30):
         pwsh, "-NoProfile", "-NonInteractive",
         "-Command", script
     ]
+    env = os.environ.copy()
+    env.pop("LD_PRELOAD", None)  # torsocks bloque les connexions directes
     try:
-        r = subprocess.run(cmd, capture_output=True, text=False, timeout=timeout)
+        r = subprocess.run(cmd, capture_output=True, text=False, timeout=timeout, env=env)
         stdout = r.stdout.decode("utf-8", errors="replace") if r.stdout else ""
         stderr = r.stderr.decode("utf-8", errors="replace") if r.stderr else ""
         return stdout, stderr, r.returncode

@@ -7,6 +7,10 @@ set -e
 cd "$(dirname "$0")"
 source .venv/bin/activate
 
+# torsocks bloque PySocks (connexion à 127.0.0.1:9050) et PowerShell.
+# On le désactive pour tout le script.
+unset LD_PRELOAD
+
 # --- Lecture des groupes depuis groups.txt ---
 GROUP_ENTRIES_FILE="groups.txt"
 if [ ! -f "$GROUP_ENTRIES_FILE" ]; then
@@ -80,6 +84,7 @@ for entry in "${GROUP_ENTRIES[@]}"; do
 
   printf "  [%3d/%d] %s -> %s\n" "$idx" "$total" "$name" "$gid"
   launch_job "$name" "$gid" "$mode"
+  sleep 2  # laisser le temps au screen de s'enregistrer
 done
 
 echo "[$(date)] Terminé"

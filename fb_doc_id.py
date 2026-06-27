@@ -3,50 +3,58 @@ QUERY_NAME = "GroupsCometMediaPhotosTabGridQuery"
 
 
 import json, os, re, time, sys
+import requests
 from datetime import datetime
 
 
 def check_current(group_id="1704587393146296"):
     """Vérifie si le doc_id actuel fonctionne encore via une requête rapide.
     Retourne True si OK, False si à rafraîchir."""
+    # L'env LD_PRELOAD (torsocks) empêche PySocks de se connecter à 127.0.0.1:9050.
+    # On lance la vérification dans un subprocess sans LD_PRELOAD.
+    import subprocess, sys, tempfile, pathlib
+
+    script = rf'''import requests, json, re
+ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+proxy = {{"https": "socks5://127.0.0.1:9050", "http": "socks5://127.0.0.1:9050"}}
+s = requests.Session()
+s.proxies.update(proxy)
+s.headers.update({{"User-Agent": ua}})
+try:
+    r = s.get("https://www.facebook.com/groups/{group_id}/media", timeout=15)
+    m = re.search(r'"LSD",\[\],\{{"token":"([^"]+)"', r.text)
+    if not m:
+        exit(1)
+    lsd = m.group(1)
+    data = {{
+        "lsd": lsd,
+        "fb_api_caller_class": "RelayModern",
+        "fb_api_req_friendly_name": "{QUERY_NAME}",
+        "server_timestamps": "true",
+        "variables": '{{"count":1,"cursor":null,"scale":1,"id":"{group_id}"}}',
+        "doc_id": "{DOC_ID}",
+    }}
+    r2 = s.post("https://www.facebook.com/api/graphql/", data=data, timeout=15)
+    body = r2.text
+    if body.startswith("for (;;);"):
+        body = body[9:]
+    j = json.loads(body)
+    exit(0 if "errors" not in j else 1)
+except Exception:
+    exit(1)
+'''
+    tmp = tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False, dir=pathlib.Path(__file__).parent)
+    tmp.write(script)
+    tmp.close()
+    env = os.environ.copy()
+    env.pop("LD_PRELOAD", None)
     try:
-        import requests
-        import subprocess
-
-        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-        proxy = "socks5h://127.0.0.1:9050"
-
-        ps = r'''
-$ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-$tmp = [System.IO.Path]::GetTempFileName() + ".html"
-try {
-    $r = Invoke-WebRequest -Uri "https://www.facebook.com/groups/%s/media" -UserAgent $ua -TimeoutSec 15 -UseBasicParsing -OutFile $tmp -PassThru
-    $html = [System.IO.File]::ReadAllText($tmp)
-    if ($html -match '"LSD",\[\],\{"token":"([^"]+)"') { $Matches[1] }
-} finally { if (Test-Path $tmp) { Remove-Item $tmp -Force } }
-''' % group_id
-        lsd = subprocess.check_output(["pwsh", "-Command", ps], text=True, timeout=20).strip().split("\n")[-1]
-        if not lsd:
-            return False
-
-        data = {
-            "lsd": lsd,
-            "fb_api_caller_class": "RelayModern",
-            "fb_api_req_friendly_name": QUERY_NAME,
-            "server_timestamps": "true",
-            "variables": json.dumps({"count": 1, "cursor": None, "scale": 1, "id": group_id}, separators=(",", ":")),
-            "doc_id": DOC_ID,
-        }
-        r = requests.post("https://www.facebook.com/api/graphql/", data=data,
-                          headers={"User-Agent": ua},
-                          proxies={"https": proxy, "http": proxy}, timeout=15)
-        body = r.text
-        if body.startswith("for (;;);"):
-            body = body[9:]
-        j = json.loads(body)
-        return "errors" not in j
+        p = subprocess.run([sys.executable, tmp.name], capture_output=True, timeout=30, env=env)
+        return p.returncode == 0
     except Exception:
         return False
+    finally:
+        os.unlink(tmp.name)
 
 
 def refresh(group_id="1704587393146296", headless=True):
@@ -110,6 +118,7 @@ def _update_file(new_id):
 
 def refresh_files(new_id):
     """Met à jour le doc_id dans tous les fichiers qui le référence."""
+    global DOC_ID
     import pathlib
     root = pathlib.Path(__file__).parent
 
@@ -126,11 +135,10 @@ def refresh_files(new_id):
             if old in content:
                 content = content.replace(old, new)
                 filepath.write_text(content)
-                print(f"  [OK] {filepath.name}")
 
-    global DOC_ID
+    print(f"  [OK] {filepath.name}")
+
     DOC_ID = new_id
-
 
 if __name__ == "__main__":
     quiet = "--quiet" in sys.argv
