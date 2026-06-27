@@ -27,6 +27,7 @@ import sys
 sys.stdout.reconfigure(encoding='utf-8')
 
 import requests
+from notify import notify
 
 try:
     from selenium import webdriver
@@ -1096,6 +1097,8 @@ class FacebookScraper:
     def run_ocr(self, download_dir=DOWNLOAD_DIR):
         """Phase 4 : OCR sur les images téléchargées, génère emails.csv.
         Utilisable aussi en solo (mode --ocr-only)."""
+        gname = f"grp{GROUP_ID}"
+        notify("debut", group=gname, script="fb_selenium", data={"mode": "ocr-only", "dossier": download_dir})
         print(f"\n{'='*50}")
         print("Phase 4 : OCR — Extraction des emails")
         print(f"{'='*50}")
@@ -1103,6 +1106,7 @@ class FacebookScraper:
         img_dir = Path(download_dir)
         if not img_dir.exists():
             print("[!] Dossier d'images introuvable.")
+            notify("echec", group=gname, script="fb_selenium", error="Dossier introuvable")
             return
 
         images = sorted(
@@ -1111,6 +1115,7 @@ class FacebookScraper:
         )
         if not images:
             print("[!] Aucune image trouvée.")
+            notify("echec", group=gname, script="fb_selenium", error="Aucune image")
             return
 
         print(f"  {len(images)} image(s) à analyser\n")
@@ -1127,6 +1132,7 @@ class FacebookScraper:
 
         if not ocr_results:
             print("\n[!] Aucun email trouvé.")
+            notify("info", group=gname, script="fb_selenium", data={"mode": "ocr-only", "emails": 0, "images": len(images)})
             return
 
         fieldnames = ["file", "fbid", "email", "all_emails_in_image"]
@@ -1146,6 +1152,8 @@ class FacebookScraper:
             writer.writerows(rows)
 
         print(f"\n[OK] {len(rows)} email(s)  ->  {EMAILS_CSV}")
+        notify("ok", group=gname, script="fb_selenium",
+               data={"mode": "ocr-only", "emails": len(rows), "images": len(images)})
 
     # -- Pipeline live : GraphQL (PowerShell) -> navigation Selenium (full-res) -> OCR page par page
 
@@ -1252,6 +1260,9 @@ class FacebookScraper:
         """Pipeline live : GraphQL PowerShell (fbids) -> Selenium (full-res) -> download -> OCR page par page."""
         import subprocess as _sp
 
+        gname = f"grp{GROUP_ID}"
+        notify("debut", group=gname, script="fb_selenium", data={"mode": "live"})
+
         # Reprise ?
         state = load_state()
         start_from = 0
@@ -1265,6 +1276,7 @@ class FacebookScraper:
         fbids = self._powershell_graphql_fbids(GROUP_ID)
         if not fbids:
             print("[!] Aucune photo trouvée via GraphQL")
+            notify("echec", group=gname, script="fb_selenium", error="Aucune photo via GraphQL")
             return
 
         total = len(fbids)
@@ -1273,6 +1285,8 @@ class FacebookScraper:
             self._save_ocr_csv(ocr_results)
             self._print_ocr_summary(ocr_results)
             clear_state()
+            email_count = sum(len(r["emails"]) for r in ocr_results)
+            notify("ok", group=gname, script="fb_selenium", data={"deja_traite": True, "emails": email_count})
             return
 
         print(f"\n[*] {total} photos trouvées via GraphQL\n")
@@ -1304,15 +1318,20 @@ class FacebookScraper:
             self._save_ocr_csv(ocr_results)
             self._print_ocr_summary(ocr_results)
             clear_state()
+            email_count = sum(len(r["emails"]) for r in ocr_results)
+            notify("ok", group=gname, script="fb_selenium",
+                   data={"mode": "live", "photos": total, "emails": email_count})
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")
             save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
+            notify("info", group=gname, script="fb_selenium", data={"interrompu": True, "processed": idx})
         except Exception as e:
             print(f"\n[!] Erreur : {e}")
             save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
+            notify("echec", group=gname, script="fb_selenium", error=str(e))
             raise
         finally:
             self.close()
@@ -1352,6 +1371,8 @@ class FacebookScraper:
     # -- Pipeline principal ---------------------------------
 
     def run(self):
+        gname = f"grp{GROUP_ID}"
+        notify("debut", group=gname, script="fb_selenium")
         state = load_state()
 
         # Si un état existe, reprendre
@@ -1405,17 +1426,21 @@ class FacebookScraper:
             print(f"  URLs     : {RESULTS_FILE}")
             print(f"  Images   : {DOWNLOAD_DIR}/")
             print(f"  Emails   : {EMAILS_CSV}")
+            notify("ok", group=gname, script="fb_selenium",
+                   data={"urls": RESULTS_FILE, "images": f"{DOWNLOAD_DIR}/", "emails": EMAILS_CSV})
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")
             if state:
                 save_state(state)
                 print(f"    État sauvegardé dans {STATE_FILE}")
+            notify("info", group=gname, script="fb_selenium", data={"interrompu": True})
         except Exception as e:
             print(f"\n[!] Erreur : {e}")
             if state:
                 save_state(state)
                 print(f"    État sauvegardé dans {STATE_FILE}")
+            notify("echec", group=gname, script="fb_selenium", error=str(e))
             raise
         finally:
             self.close()

@@ -21,6 +21,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 from fb_graphql import fetch_lsd, powershell, UA
+from notify import notify
 
 PATTERNS = [
     "offres.d.emploi.{slug}",
@@ -192,6 +193,8 @@ def main():
     empty = 0
     skipped = 0
 
+    notify("debut", script="discover_groups", data={"departements": len(depts), "deja_trouves": len(existing) or None})
+
     for dept in depts:
         dept_num = dept["num"]
         if dept_num in existing:
@@ -199,6 +202,8 @@ def main():
             skipped += 1
             continue
 
+        dept_name = dept["nom"]
+        slug = dept_slug(dept_name)
         print(f"\n[{dept_num}] {dept_name}  ({slug})")
 
         result = try_slug(dept_num, dept_name, slug)
@@ -212,9 +217,13 @@ def main():
             results.append(result)
             found += 1
             print(f"  => {gid}")
+            notify("ok", group=result["name"], script="discover_groups",
+                   data={"gid": gid, "slug": result["slug"]})
         else:
             empty += 1
             print(f"  => [echec]")
+            notify("echec", group=dept_num, script="discover_groups",
+                   data={"dept": dept_name, "slug": slug})
 
         if not args.dry_run:
             Path("groups.txt").write_text(
@@ -227,6 +236,9 @@ def main():
             )
 
         time.sleep(args.delay)
+
+    notify("ok" if found else "info", script="discover_groups",
+           data={"trouves": found, "echecs": empty, "ignores": skipped, "total": len(depts)})
 
     print(f"\n{'='*50}")
     print(f"OK     : {found}")

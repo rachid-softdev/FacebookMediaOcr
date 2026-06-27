@@ -16,6 +16,7 @@ import csv
 from pathlib import Path
 
 import requests
+from notify import notify
 
 try:
     import cv2
@@ -325,9 +326,11 @@ if __name__ == "__main__":
     print("[*] Connexion…")
     lsd, resolved_id = fetch_lsd(args.group_id)
     if not lsd:
+        notify("echec", group=args.group_id, script="fb_graphql", error="LSD introuvable")
         sys.exit(1)
 
     print("\n[*] Récupération des photos + OCR…")
+    notify("debut", group=args.group_id, script="fb_graphql", data={"pages": args.pages})
     all_entries = []
     all_ocr = []
     cursor = None
@@ -386,6 +389,9 @@ if __name__ == "__main__":
         for r in all_ocr:
             for e in r["emails"]:
                 print(f"  {e}")
+        email_data = {"emails": len(rows), "photos": len(all_entries), "pages": page}
+        notify("ok", group=args.group_id, script="fb_graphql", data=email_data)
         print(f"\n[OK] {len(rows)} email(s) -> {EMAILS_CSV}")
     else:
+        notify("info", group=args.group_id, script="fb_graphql", data={"photos": len(all_entries), "pages": page})
         print(f"\n[!] Aucun email trouvé")
