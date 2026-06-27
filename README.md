@@ -1,7 +1,6 @@
 # Facebook Group Photo Scraper + OCR
 
 Scrape les photos d'un groupe Facebook public et extrait les emails par OCR.
-Deux modes : **`--live`** (recommandé, sans login) ou **pipelines complet** (avec login).
 
 ## Prérequis
 
@@ -34,28 +33,28 @@ pip install -r requirements.txt
 
 ## Utilisation
 
-### Mode `--live` (recommandé, sans login, groupe public)
+### Mode par défaut (sans login, groupe public)
 ```bash
-python fb_selenium.py --live
+python fb_selenium.py
 ```
 
 Afficher le navigateur (debug) :
 ```bash
-python fb_selenium.py --live --no-headless
+python fb_selenium.py --no-headless
 ```
 
 Changer de groupe (ID depuis l'URL, y compris les slugs texte) :
 ```bash
-python fb_selenium.py --live --group-id 175831749464922
-python fb_selenium.py --live --group-id offres.d.emploi.indre
+python fb_selenium.py --group-id 175831749464922
+python fb_selenium.py --group-id offres.d.emploi.indre
 ```
 
 ### Exécution parallèle (VPS, plusieurs groupes simultanément)
 ```bash
 # Chaque instance doit avoir un --name unique pour isoler fichiers + dossiers
-python fb_selenium.py --live --name saisonniers --group-id 362347087928780
-python fb_selenium.py --live --name indre    --group-id offres.d.emploi.indre
-python fb_selenium.py --live --name ardennes --group-id offres.d.emploi.ardennes
+python fb_selenium.py --name saisonniers --group-id 362347087928780
+python fb_selenium.py --name indre    --group-id offres.d.emploi.indre
+python fb_selenium.py --name ardennes --group-id offres.d.emploi.ardennes
 ```
 Produit : `state-{name}.json`, `emails-{name}.csv`, `download-{name}/` — pas de conflit.
 
@@ -67,18 +66,12 @@ Pipeline :
 
 **Reprise après interruption** : voir section [Reprise après interruption](#9-reprise-après-interruption) plus bas.
 
-### Pipeline complet (avec login Facebook)
-```bash
-python fb_selenium.py --email user@example.com --password "monpass"
-```
-Phases : Login → Scroll page média → Fetch URLs → Download → OCR.
-
 ### OCR seul sur un dossier existant
 ```bash
 python fb_selenium.py --ocr-only ./download
 ```
 
-### GraphQL seul (standalone, sans Selenium)
+### GraphQL seul (PowerShell, sans Selenium)
 ```bash
 python fb_graphql.py <group_id> --pages 50
 ```
@@ -94,15 +87,18 @@ python discover_groups.py --dept 01 08 36
 
 # Simulation (n'écrit pas les fichiers)
 python discover_groups.py --dry-run
+
+# Forcer le re-traitement des departements deja decouverts
+python discover_groups.py --force
 ```
 
 Stratégie :
 1. Charge `departements.json` (101 départements)
-2. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
-3. Vérifie son existence via PowerShell
-4. Si trouvé → résout l'ID numérique
-5. Si absent → cherche sur Bing (Google bloque les robots) — max 3 groupes
-6. Si rien trouvé → on passe au suivant (pas de blocage)
+2. Ignore les départements déjà dans `groups.json` (sauf `--force`)
+3. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
+4. Vérifie son existence via PowerShell
+5. Si trouvé → résout l'ID numérique + vérifie l'API GraphQL
+6. Enregistre dans `groups.json` + `groups.txt`
 
 Produit :
 - `groups.txt` : pour `run_all.sh` (format `name:group_id`)
@@ -144,6 +140,7 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 fb_selenium.py              # Script principal (Selenium + GraphQL + OCR)
 fb_graphql.py               # GraphQL standalone (PowerShell)
 discover_groups.py          # Decouverte auto des groupes par departement
+notify.py                   # Notifications Discord (webhook)
 departements.json           # Liste des 101 departements (source discover)
 all_email_provider_domains.txt.txt  # Liste des domaines email connus
 groups.txt                  # Groupes trouves (format name:group_id)
@@ -164,7 +161,7 @@ logs-{name}.txt             # Logs individuels (mode service)
 | PowerShell | `powershell.exe` (intégré) | `pwsh` (PowerShell Core) |
 | ChromeDriver | `%USERPROFILE%\appdata\...` | `/usr/bin/chromedriver` |
 | Tesseract | `C:\Program Files\...` | `/usr/bin/tesseract` |
-| Headless | `--headless=new` (par défaut, utiliser `--no-headless` pour voir le navigateur) | Idem |
+| Headless | `--headless=new` (par défaut, `--no-headless` pour debug) | Idem |
 
 ## Déploiement VPS (Ubuntu)
 
@@ -215,7 +212,7 @@ screen -S saisonniers
 # Dans la session :
 cd ~/FacebookMediaOcr
 source .venv/bin/activate
-python fb_selenium.py --live --name saisonniers --group-id 362347087928780
+python fb_selenium.py --name saisonniers --group-id 362347087928780
 # Ctrl+A puis D pour détacher (le script continue)
 
 # Lancer les autres groupes (chacun dans un nouveau screen)
@@ -361,7 +358,7 @@ pkill -f fb_selenium.py
 | `pwsh: command not found` | `sudo apt install pwsh` (PowerShell Core) |
 | `chromedriver: not found` | `sudo apt install chromium-chromedriver` |
 | Chrome ouvre une popup "Chrome n'est pas à jour" | Ignorer, le headless fonctionne quand même |
-| Erreur `Failed to create shared context` | Sans conséquence, lancer avec `--no-headless` pour voir |
+| Erreur `Failed to create shared context` | Sans conséquence, lancer avec `--no-headless` pour debug |
 | `state.json` ne reprend pas au bon endroit | Supprimer `state-{name}.json` et relancer depuis le début |
 | Concurrence sur le ChromeDriver | Chaque instance Selenium lance son propre driver, sans conflit |
 | Processus zombie screen | `screen -wipe` pour nettoyer |
