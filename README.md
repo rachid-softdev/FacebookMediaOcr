@@ -20,7 +20,7 @@ echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google-chrome.gpg] http://dl
 sudo apt update && sudo apt install google-chrome-stable
 
 # Dépendances
-sudo apt install chromium-chromedriver tesseract-ocr tesseract-ocr-fra pwsh
+sudo apt install chromium-chromedriver tesseract-ocr tesseract-ocr-fra pwsh tor
 
 # Python
 pip install selenium opencv-python numpy pytesseract Pillow requests
@@ -38,10 +38,8 @@ pip install -r requirements.txt
 python fb_selenium.py
 ```
 
-Afficher le navigateur (debug) :
-```bash
-python fb_selenium.py --no-headless
-```
+Le mode live n'utilise pas Selenium (téléchargement direct via GraphQL + Tor).
+`--no-headless` n'est utile qu'en mode `--ocr-only`.
 
 Changer de groupe (ID depuis l'URL, y compris les slugs texte) :
 ```bash
@@ -59,10 +57,13 @@ python fb_selenium.py --name ardennes --group-id offres.d.emploi.ardennes
 Produit : `state-{name}.json`, `emails-{name}.csv`, `download-{name}/` — pas de conflit.
 
 Pipeline :
-1. **GraphQL** (PowerShell) → récupère les fbid des photos (4000 max)
-2. **GraphQL direct** → URL full-résolution via `node.image.uri` (pas de Selenium, pas d'og:image)
-3. **Download** → télécharge l'image
+1. **GraphQL** (PowerShell → LSD + résolution ID)
+2. **GraphQL via Tor SOCKS** (Python requests → fbid + URL full-résolution)
+3. **Download** → télécharge l'image (requests, pas de Selenium)
 4. **OCR** → prétraitement OpenCV → Tesseract → emails + raw_text
+
+> Les requêtes GraphQL passent par **Tor SOCKS** (`socks5h://127.0.0.1:9050`)
+> pour éviter le rate limiting Facebook par IP.
 
 **Reprise après interruption** : voir section [Reprise après interruption](#9-reprise-après-interruption) plus bas.
 
@@ -83,6 +84,10 @@ Le script envoie des notifications à chaque étape via un webhook Discord :
 | Erreur | ❌ | Erreur avec le message |
 
 Les notifications sont envoyées par `notify.py` (webhook intégré). Pas de configuration nécessaire.
+
+**Édition du message** : au lieu de poster une nouvelle notification à chaque étape,
+le script **édite le même message** pour afficher la progression (toutes les ~60 photos).
+Le message initial (▶️) devient le message final (✅ / ❌) — pas de spam Discord.
 
 ### Enrichissement IA des donnees OCR
 
@@ -312,8 +317,9 @@ Les slug textes (`offres.d.emploi.ain`) comme les ID numériques fonctionnent.
 
 ```bash
 chmod +x run_all.sh
-./run_all.sh              # Mode screen (interactif)
-./run_all.sh --systemd    # Mode service (arrière-plan direct)
+./run_all.sh                 # Mode screen, 2 groupes max en parallèle
+./run_all.sh --systemd       # Mode service (arrière-plan direct)
+./run_all.sh --parallel=4    # 4 groupes au lieu de 2
 ```
 
 Lit automatiquement `groups.txt`, lance chaque groupe. Le script Python
@@ -430,61 +436,16 @@ pkill -f fb_selenium.py
 
 #### Rate limiting Facebook
 
-Chaque instance Selenium visite les pages photos avec **0.5s entre chaque requête**.
-Avec 4 groupes en parallèle, le trafic total est d'environ **2-3 requêtes/seconde**
-vers Facebook — ce qui reste très faible et **ne déclenche pas de rate limiting**
-dans la pratique.
+Les requêtes GraphQL passent par **Tor SOCKS** (`socks5h://127.0.0.1:9050`)
+pour éviter le rate limiting IP de Facebook. Un délai de **1s entre chaque page**
+GraphQL est appliqué. Le téléchargement des images se fait avec **0.5s entre
+chaque photo**.
 
-Points rassurants :
-- Le script ne fait **aucune action** (clic, like, commentaire) — que des `GET`
-- Les pages visitées sont **publiques** (pas de login, pas de session)
-- Le délai de 0.5s est déjà bien plus lent qu'un humain
-- Une exécution hebdomadaire laisse 7 jours entre deux runs
+#### Parallélisme
 
-Si vous voulez réduire encore le risque :
-
-```bash
-# Ajouter un délai plus long entre chaque photo (modifier fb_selenium.py)
-# Ligne 1283 : time.sleep(0.5) -> time.sleep(1.5)
-```
-
-#### RAM : adaptation automatique
-
-`run_all.sh` détecte la RAM disponible via `/proc/meminfo` (`MemAvailable`) et
-limite le nombre d'instances lancées en parallèle pour ne pas étouffer les
-autres services (kimaki, commune-scraper...) :
-
-```
-RAM dispo = MemAvailable - 512 Mo (marge système)
-max = RAM_dispo / 300 Mo (estimation par Chrome headless)
-```
-
-| RAM totale | RAM dispo typique | Max instances | 52 groupes |
-|------------|-------------------|---------------|------------|
-| 2 Go       | ~1,2 Go           | 3             | 3 à la fois |
-| 4 Go       | ~3 Go              | 8-12          | 8-12 à la fois |
-| 8 Go       | ~5-7 Go            | 15-25         | Tous si assez de RAM |
-
-Si la RAM est insuffisante pour tout lancer d'un coup, les groupes en attente
-démarreront automatiquement dès qu'une place se libère (quand un groupe
-termine).
-
-**Avec 90 départements** : le script tourne en continu, 3 à 11 groupes en
-parallèle selon la RAM. Ceux qui sont déjà terminés sont sautés
-automatiquement (vérification du `state-{name}.json`). Le temps total dépend
-du nombre de photos par groupe, mais le caractère hebdomadaire laisse
-largement le temps de tout traiter.
-
-Voir le calcul en direct dans les logs :
-
-```
-[date] RAM totale : 1982 Mo — Parallélisme max : 3
-  [  1/90] ain -> offres.d.emploi.ain
-  [  2/90] aisne -> offres.d.emploi.aisne
-  [  3/90] allier -> offres.d.emploi.allier
-... (attente de place libre) ...
-  [  4/90] alpes -> offres.d.emploi.alpes
-```
+Par défaut, `run_all.sh` lance **2 groupes à la fois** (`--parallel=2`).
+Surchargeable avec `--parallel=N`. Ce n'est plus basé sur la RAM car le mode
+live n'utilise pas Selenium (pas de Chrome headless lourd).
 
 ### 9. Reprise après interruption
 
