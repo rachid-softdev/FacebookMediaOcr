@@ -29,6 +29,7 @@ sys.stdout.reconfigure(encoding='utf-8')
 
 import requests
 from notify import notify
+from fb_doc_id import DOC_ID, QUERY_NAME
 
 try:
     from selenium import webdriver
@@ -859,7 +860,7 @@ class FacebookScraper:
                 "fb_api_req_friendly_name": "GroupsCometMediaPhotosTabGridQuery",
                 "server_timestamps": "true",
                 "variables": json.dumps(variables, separators=(",", ":")),
-                "doc_id": "26680580074858996",
+                 "doc_id": DOC_ID,
             }
 
             # Utiliser fetch() du navigateur pour éviter le blocage anti-bot

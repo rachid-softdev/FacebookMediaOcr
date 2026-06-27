@@ -52,8 +52,7 @@ except ImportError:
 
 
 GRAPHQL_URL = "https://www.facebook.com/api/graphql/"
-DOC_ID = "26680580074858996"
-QUERY_NAME = "GroupsCometMediaPhotosTabGridQuery"
+from fb_doc_id import DOC_ID, QUERY_NAME
 PAGE_SIZE = 8
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
 DOWNLOAD_DIR = "download"

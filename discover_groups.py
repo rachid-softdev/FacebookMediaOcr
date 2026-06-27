@@ -87,6 +87,7 @@ def resolve_group_id(slug):
 
 def graphql_works(lsd, group_id):
     """Verifie que l'API GraphQL repond avec des photos pour ce groupe."""
+    from fb_doc_id import DOC_ID as doc_id
     variables_json = json.dumps({
         "count": 1, "cursor": None, "scale": 1, "id": str(group_id),
     }, separators=(",", ":"))
@@ -99,7 +100,7 @@ $body = @{{
     fb_api_req_friendly_name = 'GroupsCometMediaPhotosTabGridQuery'
     server_timestamps = 'true'
     variables = $variables
-    doc_id = '26680580074858996'
+    doc_id = '{doc_id}'
 }}
 $r = Invoke-WebRequest -Uri 'https://www.facebook.com/api/graphql/' -Method POST -Body $body -UserAgent '{UA}' -MaximumRedirection 0 -TimeoutSec 15 -UseBasicParsing
 Write-Output $r.Content
