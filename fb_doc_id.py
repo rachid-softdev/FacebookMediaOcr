@@ -2,6 +2,53 @@ DOC_ID = "26680580074858996"
 QUERY_NAME = "GroupsCometMediaPhotosTabGridQuery"
 
 
+import json, os, re, time, sys
+from datetime import datetime
+
+
+def check_current(group_id="1704587393146296"):
+    """Vérifie si le doc_id actuel fonctionne encore via une requête rapide.
+    Retourne True si OK, False si à rafraîchir."""
+    try:
+        import requests
+        import subprocess
+
+        ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+        proxy = "socks5h://127.0.0.1:9050"
+
+        ps = r'''
+$ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+$tmp = [System.IO.Path]::GetTempFileName() + ".html"
+try {
+    $r = Invoke-WebRequest -Uri "https://www.facebook.com/groups/%s/media" -UserAgent $ua -TimeoutSec 15 -UseBasicParsing -OutFile $tmp -PassThru
+    $html = [System.IO.File]::ReadAllText($tmp)
+    if ($html -match '"LSD",\[\],\{"token":"([^"]+)"') { $Matches[1] }
+} finally { if (Test-Path $tmp) { Remove-Item $tmp -Force } }
+''' % group_id
+        lsd = subprocess.check_output(["pwsh", "-Command", ps], text=True, timeout=20).strip().split("\n")[-1]
+        if not lsd:
+            return False
+
+        data = {
+            "lsd": lsd,
+            "fb_api_caller_class": "RelayModern",
+            "fb_api_req_friendly_name": QUERY_NAME,
+            "server_timestamps": "true",
+            "variables": json.dumps({"count": 1, "cursor": None, "scale": 1, "id": group_id}, separators=(",", ":")),
+            "doc_id": DOC_ID,
+        }
+        r = requests.post("https://www.facebook.com/api/graphql/", data=data,
+                          headers={"User-Agent": ua},
+                          proxies={"https": proxy, "http": proxy}, timeout=15)
+        body = r.text
+        if body.startswith("for (;;);"):
+            body = body[9:]
+        j = json.loads(body)
+        return "errors" not in j
+    except Exception:
+        return False
+
+
 def refresh(group_id="1704587393146296", headless=True):
     """Découvre le doc_id GraphQL actuel via Selenium + Chrome DevTools.
 
@@ -86,12 +133,25 @@ def refresh_files(new_id):
 
 
 if __name__ == "__main__":
-    import sys
-    group_id = sys.argv[1] if len(sys.argv) > 1 else "1704587393146296"
-    print(f"Recherche du doc_id sur le groupe {group_id}…")
-    new_id = refresh(group_id)
+    quiet = "--quiet" in sys.argv
+    group_id = "1704587393146296"
+    for arg in sys.argv[1:]:
+        if arg != "--quiet":
+            group_id = arg
+
+    # Vérification rapide : le doc_id actuel fonctionne-t-il encore ?
+    if check_current(group_id):
+        if not quiet:
+            print(f"doc_id {DOC_ID} OK")
+        sys.exit(0)
+
+    # Échec : lancer la découverte Selenium
+    if not quiet:
+        print(f"doc_id {DOC_ID} invalide, lancement de la découverte…")
+    new_id = refresh(group_id, headless=not quiet)
     if new_id:
-        print(f"Nouveau doc_id trouvé : {new_id}")
+        if not quiet:
+            print(f"Nouveau doc_id trouvé : {new_id}")
         refresh_files(new_id)
-    else:
-        print("Aucun doc_id trouvé")
+    elif not quiet:
+        print("Aucun doc_id trouvé (le doc_id actuel est probablement toujours valide)")

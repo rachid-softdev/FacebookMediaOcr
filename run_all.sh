@@ -39,6 +39,13 @@ for arg in "$@"; do
 done
 echo "[$(date)] Parallélisme max : $max_parallel (mode: $mode)"
 
+# --- Auto-découverte du doc_id GraphQL ---
+echo "[$(date)] Vérification du doc_id GraphQL…"
+set +e
+python fb_doc_id.py --quiet 2>/dev/null
+set -e
+echo "[$(date)] doc_id OK"
+
 launch_job() {
   local name="$1" gid="$2" mode="$3"
   if [ "$mode" = "systemd" ]; then
