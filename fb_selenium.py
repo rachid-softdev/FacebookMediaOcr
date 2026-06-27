@@ -337,10 +337,14 @@ class FacebookScraper:
             if not os.path.exists(chromedriver_path):
                 chromedriver_path = "chromedriver.exe"
         else:
-            for p in ["/usr/bin/chromedriver", "/usr/local/bin/chromedriver", "chromedriver"]:
-                chromedriver_path = p
-                if os.path.exists(p) or p == "chromedriver":
-                    break
+            chromedriver_path = shutil.which("chromedriver")
+            if not chromedriver_path:
+                for p in ["/usr/bin/chromedriver", "/usr/local/bin/chromedriver"]:
+                    if os.path.exists(p):
+                        chromedriver_path = p
+                        break
+            if not chromedriver_path:
+                chromedriver_path = "chromedriver"
 
         service = Service(chromedriver_path)
         options = webdriver.ChromeOptions()
