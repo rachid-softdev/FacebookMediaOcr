@@ -1169,12 +1169,13 @@ class FacebookScraper:
 
     @staticmethod
     def _powershell_graphql_fbids(group_id, max_pages=500):
-        """Récupère la liste des fbids via PowerShell + GraphQL (pas de login)."""
+        """Récupère les URLs des photos via PowerShell + GraphQL (pas de login).
+        Retourne une liste de dicts {"fbid": ..., "url": ...} ou None."""
         from fb_graphql import powershell, fetch_lsd, graphql_page
         lsd, resolved_id = fetch_lsd(group_id)
         if not lsd:
             return None
-        fbids = []
+        photos = []
         cursor = None
         for page in range(1, max_pages + 1):
             print(f"  [GraphQL page {page}]", end="", flush=True)
@@ -1182,11 +1183,42 @@ class FacebookScraper:
             if not entries:
                 print(" empty")
                 break
-            fbids.extend(e["fbid"] for e in entries)
+            for e in entries:
+                if e.get("url"):
+                    photos.append({"fbid": e["fbid"], "url": e["url"]})
             print(f" +{len(entries)}")
             if not cursor:
                 break
-        return fbids
+        return photos
+
+    def _process_photo(self, fbid, url, session):
+        """Télécharge une photo depuis l'URL GraphQL et lance l'OCR directement."""
+        label = f"  {fbid}"
+        try:
+            resp = session.get(
+                url,
+                headers={"Referer": PHOTO_URL_TPL.format(fbid), "User-Agent": UA},
+                stream=True, timeout=20,
+            )
+            if resp.status_code != 200:
+                print(f"{label}  HTTP {resp.status_code}")
+                return None
+
+            data = resp.content
+            if len(data) < 1024:
+                print(f"{label}  TROP PETIT ({len(data)} octets)")
+                return None
+
+            ct = resp.headers.get("Content-Type", "")
+            ext = ".png" if "png" in ct else ".jpg"
+            out_path = Path(DOWNLOAD_DIR) / f"{fbid}{ext}"
+            with open(out_path, "wb") as f:
+                f.write(data)
+
+            return process_image_ocr(out_path)
+        except Exception as e:
+            print(f"{label}  ERR {e}")
+            return None
 
     def extract_full_url(self, fbid):
         """Visite la page photo et extrait l'URL full-res (Selenium, pas de login)."""
@@ -1306,17 +1338,20 @@ class FacebookScraper:
         session.headers.update({"User-Agent": UA})
 
         try:
-            self.start_driver()
-
-            for idx, fbid in enumerate(fbids):
+            for idx, photo in enumerate(fbids):
                 if idx < start_from:
                     continue
 
-                print(f"\n  [{idx+1:>4}/{total}] {fbid}")
+                fbid = photo["fbid"]
+                url = photo["url"]
+                label = f"  [{idx+1:>4}/{total}] {fbid}"
 
-                res = self.process_fbid_live(fbid, session)
+                res = self._process_photo(fbid, url, session)
                 if res:
                     ocr_results.append(res)
+                    print(f"{label}  OK  {res['emails']}")
+                else:
+                    print(f"{label}  OK  -")
 
                 if (idx + 1) % BATCH_SIZE == 0 or idx == total - 1:
                     self._save_ocr_csv(ocr_results)
@@ -1343,8 +1378,6 @@ class FacebookScraper:
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
             notify("echec", group=gname, script="fb_selenium", error=str(e))
             raise
-        finally:
-            self.close()
 
     def _save_ocr_csv(self, ocr_results):
         if not ocr_results:
