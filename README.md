@@ -98,6 +98,8 @@ Schema extrait par l'IA :
 | `city` | Ville |
 | `job` | Métier recherche |
 
+> **Filtre** : seules les entrees avec un `email` sont conservees (pas d'email = offre employeur, pas un CV).
+
 ### GraphQL seul (PowerShell, sans Selenium)
 ```bash
 python fb_graphql.py <group_id> --pages 50

@@ -227,12 +227,16 @@ def main():
         print(f"    -> {len(validated)} items valides")
         print()
 
-    # --- Sauvegarde ---
-    if all_enriched:
+    # --- Filtre : on ne garde que les entrees avec email (sinon c'est une offre, pas un CV) ---
+    filtered = [e for e in all_enriched if e.get("email", "").strip()]
+    if filtered:
         group_name = args.name or "all"
-        save_enriched(all_enriched, group_name)
+        save_enriched(filtered, group_name)
+        skipped = len(all_enriched) - len(filtered)
+        if skipped:
+            print(f"    {skipped} entrees ignorees (pas d'email -> offre employeur)")
     else:
-        print("[!] Aucune donnee enrichie")
+        print("[!] Aucune donnee enrichie avec email")
 
 
 if __name__ == "__main__":
