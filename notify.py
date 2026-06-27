@@ -1,17 +1,5 @@
-"""
-Notification Discord pour les scripts Facebook Media OCR.
-
-Usage :
-    from notify import notify
-
-    notify("debut", group="emploi34", script="fb_graphql")
-    notify("ok", group="emploi34", script="fb_graphql", data={"posts": 15, "emails": 3})
-    notify("echec", group="emploi34", script="fb_graphql", error="timeout")
-"""
-
+import re
 import json
-import os
-import sys
 from datetime import datetime
 
 try:
@@ -21,21 +9,31 @@ except ImportError:
 
 WEBHOOK_URL = "https://discord.com/api/webhooks/1520368125994860624/xpcNpvHK2sKcyiQD61anfWG39Z1ur-x9AQCBNFTwkSN3yB20ZEUvCKzPemiwlpSLgOnG"
 
-# Cache pour eviter les spam en cas d'erreur reseau
+_webhook_parts = None
 _last_error = None
 
 
-def notify(status, group="?", script="?", data=None, error=None, webhook=None):
-    """Envoie une notification Discord.
+def _parse_webhook(url):
+    m = re.match(r"https://discord\.com/api/webhooks/(\d+)/([^/]+)", url)
+    if m:
+        return m.group(1), m.group(2)
+    return None, None
 
-    status : "debut" | "ok" | "echec" | "info"
-    group  : identifiant du groupe traite
-    script : nom du script
-    data   : dict avec des infos supplementaires (ex: {"posts": 15, "emails": 3})
-    error  : message d'erreur (pour status="echec")
+
+def notify(status, group="?", script="?", data=None, error=None, webhook=None, message_id=None):
+    """Envoie ou édite une notification Discord.
+
+    Retourne le message_id (pour édition ultérieure) ou None.
+
+    status     : "debut" | "ok" | "echec" | "info"
+    group      : identifiant du groupe traité
+    script     : nom du script
+    data       : dict avec infos supplémentaires
+    error      : message d'erreur (pour status="echec")
+    message_id : si fourni, édite le message existant au lieu d'en créer un
     """
     if requests is None:
-        return
+        return None
 
     colors = {
         "debut": 0x3498DB,
@@ -76,13 +74,26 @@ def notify(status, group="?", script="?", data=None, error=None, webhook=None):
         "footer": {"text": "Facebook Media OCR"},
     }
 
-    payload = {"embeds": [embed]}
     url = webhook or WEBHOOK_URL
 
     try:
-        r = requests.post(url, json=payload, timeout=10)
-        if r.status_code not in (200, 204):
-            global _last_error
-            _last_error = f"Discord {r.status_code}"
+        if message_id:
+            wh_id, wh_token = _parse_webhook(url)
+            if wh_id:
+                edit_url = f"https://discord.com/api/webhooks/{wh_id}/{wh_token}/messages/{message_id}"
+                r = requests.patch(edit_url, json={"embeds": [embed]}, timeout=10)
+                if r.status_code not in (200, 204):
+                    global _last_error
+                    _last_error = f"Discord edit {r.status_code}"
+                return message_id
+            return None
+        else:
+            r = requests.post(url, json={"embeds": [embed]}, timeout=10)
+            if r.status_code == 200:
+                return r.json().get("id")
+            if r.status_code not in (200, 204):
+                _last_error = f"Discord {r.status_code}"
+            return None
     except requests.RequestException as e:
         _last_error = str(e)
+        return None

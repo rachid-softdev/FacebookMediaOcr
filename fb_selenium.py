@@ -80,6 +80,7 @@ STATE_FILE = "state.json"
 RESULTS_FILE = "urls.json"
 EMAILS_CSV = "emails.csv"
 BATCH_SIZE = 200
+UPDATE_INTERVAL = 60
 STAGNANT_MAX = 20
 SCROLL_DELAY = 0.3
 SCROLL_FRACTION = 1.0
@@ -1311,13 +1312,12 @@ class FacebookScraper:
             return None
 
     def run_live(self):
-        """Pipeline live : GraphQL PowerShell (fbids) -> Selenium (full-res) -> download -> OCR page par page."""
+        """Pipeline live : GraphQL (Tor) -> download -> OCR page par page."""
         import subprocess as _sp
 
         gname = GROUP_NAME or f"grp{GROUP_ID}"
-        notify("debut", group=gname, script="fb_selenium", data={"mode": "live"})
+        msg_id = notify("debut", group=gname, script="fb_selenium", data={"mode": "live"})
 
-        # Reprise ?
         state = load_state()
         start_from = 0
         ocr_results = []
@@ -1330,7 +1330,7 @@ class FacebookScraper:
         fbids = self._powershell_graphql_fbids(GROUP_ID, max_pages=MAX_PAGES)
         if not fbids:
             print("[!] Aucune photo trouvée via GraphQL")
-            notify("echec", group=gname, script="fb_selenium", error="Aucune photo via GraphQL")
+            notify("echec", group=gname, script="fb_selenium", error="Aucune photo via GraphQL", message_id=msg_id)
             return
 
         total = len(fbids)
@@ -1340,7 +1340,8 @@ class FacebookScraper:
             self._print_ocr_summary(ocr_results)
             clear_state()
             email_count = sum(len(r["emails"]) for r in ocr_results)
-            notify("ok", group=gname, script="fb_selenium", data={"deja_traite": True, "emails": email_count})
+            notify("ok", group=gname, script="fb_selenium",
+                   data={"deja_traite": True, "emails": email_count}, message_id=msg_id)
             return
 
         print(f"\n[*] {total} photos trouvées via GraphQL\n")
@@ -1348,6 +1349,8 @@ class FacebookScraper:
         Path(DOWNLOAD_DIR).mkdir(exist_ok=True)
         session = requests.Session()
         session.headers.update({"User-Agent": UA})
+
+        last_update = 0
 
         try:
             for idx, photo in enumerate(fbids):
@@ -1370,6 +1373,12 @@ class FacebookScraper:
                     email_count = sum(len(r["emails"]) for r in ocr_results)
                     print(f"\n  --- Lot : {idx+1}/{total}, {email_count} email(s) ---")
 
+                if (idx + 1) - last_update >= UPDATE_INTERVAL or idx == total - 1:
+                    email_count = sum(len(r["emails"]) for r in ocr_results)
+                    notify("info", group=gname, script="fb_selenium", message_id=msg_id,
+                           data={"progression": f"{idx+1}/{total}", "emails": email_count})
+                    last_update = idx + 1
+
                 time.sleep(0.5)
 
             self._save_ocr_csv(ocr_results)
@@ -1377,18 +1386,19 @@ class FacebookScraper:
             clear_state()
             email_count = sum(len(r["emails"]) for r in ocr_results)
             notify("ok", group=gname, script="fb_selenium",
-                   data={"mode": "live", "photos": total, "emails": email_count})
+                   data={"mode": "live", "photos": total, "emails": email_count}, message_id=msg_id)
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")
             save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
-            notify("info", group=gname, script="fb_selenium", data={"interrompu": True, "processed": idx})
+            notify("info", group=gname, script="fb_selenium",
+                   data={"interrompu": True, "processed": idx}, message_id=msg_id)
         except Exception as e:
             print(f"\n[!] Erreur : {e}")
             save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
-            notify("echec", group=gname, script="fb_selenium", error=str(e))
+            notify("echec", group=gname, script="fb_selenium", error=str(e), message_id=msg_id)
             raise
 
     def _save_ocr_csv(self, ocr_results):
