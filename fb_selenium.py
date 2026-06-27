@@ -1135,15 +1135,17 @@ class FacebookScraper:
             notify("info", group=gname, script="fb_selenium", data={"mode": "ocr-only", "emails": 0, "images": len(images)})
             return
 
-        fieldnames = ["file", "fbid", "email", "all_emails_in_image"]
+        fieldnames = ["file", "fbid", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
+            raw = r.get("raw_text", "").replace('"', "'").strip()
             for i, email in enumerate(r["emails"]):
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
                     "email": email,
                     "all_emails_in_image": ", ".join(r["emails"]),
+                    "raw_text": raw if i == 0 else "",
                 })
 
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
@@ -1339,15 +1341,19 @@ class FacebookScraper:
     def _save_ocr_csv(self, ocr_results):
         if not ocr_results:
             return
-        fieldnames = ["file", "fbid", "email", "all_emails_in_image"]
+        fieldnames = ["file", "fbid", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
+            raw = r.get("raw_text", "").replace('"', "'").strip()
             for email in r["emails"]:
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
                     "email": email,
                     "all_emails_in_image": ", ".join(r["emails"]),
+                    "raw_text": raw if not any(
+                        row["file"] == r["file"] for row in rows
+                    ) else "",
                 })
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)

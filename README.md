@@ -71,6 +71,33 @@ Pipeline :
 python fb_selenium.py --ocr-only ./download
 ```
 
+### Enrichissement IA des donnees OCR
+
+```bash
+# Lit tous les state-*.json, genere des prompts par lots
+python enrich.py
+
+# Depuis des CSV existants
+python enrich.py --from-csv emails-saisonniers.csv
+
+# Un seul groupe
+python enrich.py --name saisonniers
+```
+
+Le script formate les textes OCR en lots, attend la reponse IA (JSON valide),
+parse et sauvegarde dans `enriched-{name}.csv`.
+
+Schema extrait par l'IA :
+
+| Champ | Description |
+|-------|-------------|
+| `name` | Nom de famille |
+| `firstname` | Prenom |
+| `phone` | Telephone (06, 07, ...) |
+| `email` | Email |
+| `city` | Ville |
+| `job` | Métier recherche |
+
 ### GraphQL seul (PowerShell, sans Selenium)
 ```bash
 python fb_graphql.py <group_id> --pages 50
@@ -146,6 +173,7 @@ all_email_provider_domains.txt.txt  # Liste des domaines email connus
 groups.txt                  # Groupes trouves (format name:group_id)
 groups.json                 # Groupes trouves (format detaille avec URL)
 run_all.sh                  # Lancement parallele (lit groups.txt)
+enrich.py                   # Enrichissement OCR par IA (nom, prenom, tel, ville...)
 facebook-media-ocr.service   # Unite systemd pour le service
 facebook-media-ocr.timer     # Timer systemd (tous les lundis 2h)
 facebook-media-ocr.logrotate # Rotation des logs (logrotate)
