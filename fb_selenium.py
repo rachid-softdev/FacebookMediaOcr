@@ -72,6 +72,7 @@ except ImportError:
 GROUP_ID = "362347087928780"
 GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
 MAX_PAGES = 500
+GROUP_NAME = None
 PHOTO_URL_TPL = "https://www.facebook.com/photo/?fbid={}"
 DOWNLOAD_DIR = "download"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
@@ -1103,7 +1104,7 @@ class FacebookScraper:
     def run_ocr(self, download_dir=DOWNLOAD_DIR):
         """Phase 4 : OCR sur les images téléchargées, génère emails.csv.
         Utilisable aussi en solo (mode --ocr-only)."""
-        gname = f"grp{GROUP_ID}"
+        gname = GROUP_NAME or f"grp{GROUP_ID}"
         notify("debut", group=gname, script="fb_selenium", data={"mode": "ocr-only", "dossier": download_dir})
         print(f"\n{'='*50}")
         print("Phase 4 : OCR — Extraction des emails")
@@ -1310,7 +1311,7 @@ class FacebookScraper:
         """Pipeline live : GraphQL PowerShell (fbids) -> Selenium (full-res) -> download -> OCR page par page."""
         import subprocess as _sp
 
-        gname = f"grp{GROUP_ID}"
+        gname = GROUP_NAME or f"grp{GROUP_ID}"
         notify("debut", group=gname, script="fb_selenium", data={"mode": "live"})
 
         # Reprise ?
@@ -1457,10 +1458,11 @@ def main():
         GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
 
     if args.name:
-        global STATE_FILE, EMAILS_CSV, DOWNLOAD_DIR
+        global STATE_FILE, EMAILS_CSV, DOWNLOAD_DIR, GROUP_NAME
         STATE_FILE = f"state-{args.name}.json"
         EMAILS_CSV = f"emails-{args.name}.csv"
         DOWNLOAD_DIR = f"download-{args.name}"
+        GROUP_NAME = args.name
 
     if args.max_pages:
         global MAX_PAGES

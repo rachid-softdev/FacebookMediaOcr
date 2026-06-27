@@ -60,9 +60,9 @@ Produit : `state-{name}.json`, `emails-{name}.csv`, `download-{name}/` — pas d
 
 Pipeline :
 1. **GraphQL** (PowerShell) → récupère les fbid des photos (4000 max)
-2. **Selenium** → navigue sur chaque page photo, extrait l'URL full-résolution (og:image)
+2. **GraphQL direct** → URL full-résolution via `node.image.uri` (pas de Selenium, pas d'og:image)
 3. **Download** → télécharge l'image
-4. **OCR** → prétraitement OpenCV → Tesseract → emails
+4. **OCR** → prétraitement OpenCV → Tesseract → emails + raw_text
 
 **Reprise après interruption** : voir section [Reprise après interruption](#9-reprise-après-interruption) plus bas.
 
@@ -70,6 +70,19 @@ Pipeline :
 ```bash
 python fb_selenium.py --ocr-only ./download
 ```
+
+### Notifications Discord
+
+Le script envoie des notifications à chaque étape via un webhook Discord :
+
+| Étape | Emoji | Description |
+|-------|-------|-------------|
+| Début | ▶️ | Traitement démarré (mode, groupe) |
+| Succès | ✅ | Traitement terminé (emails trouvés) |
+| Aucun email | ℹ️ | Aucun email trouvé / déjà traité |
+| Erreur | ❌ | Erreur avec le message |
+
+Les notifications sont envoyées par `notify.py` (webhook intégré). Pas de configuration nécessaire.
 
 ### Enrichissement IA des donnees OCR
 
@@ -84,8 +97,9 @@ python enrich.py --from-csv emails-saisonniers.csv
 python enrich.py --name saisonniers
 ```
 
-Le script formate les textes OCR en lots, attend la reponse IA (JSON valide),
-parse et sauvegarde dans `enriched-{name}.csv`.
+Le script formate les textes OCR en lots (raw_text), attend la reponse IA
+(JSON valide), parse et sauvegarde dans `enriched-{name}.csv`.
+Les champs extraits sont : `name`, `firstname`, `phone`, `email`, `city`, `job`.
 
 Schema extrait par l'IA :
 
@@ -99,6 +113,9 @@ Schema extrait par l'IA :
 | `job` | Métier recherche |
 
 > **Filtre** : seules les entrees avec un `email` sont conservees (pas d'email = offre employeur, pas un CV).
+
+Le CSV de sortie (`emails-{name}.csv`) contient une colonne `raw_text` avec le texte OCR brut,
+permettant un re-traitement sans re-télécharger les images.
 
 ### GraphQL seul (PowerShell, sans Selenium)
 ```bash
@@ -153,6 +170,9 @@ Produit :
 
 Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6104 fournisseurs) est conservé.
 
+> La colonne `raw_text` dans le CSV stocke le texte OCR brut pour permettre
+> un re-traitement (enrichissement IA, correction) sans re-télécharger les images.
+
 ## Fichiers de sortie
 
 | Fichier | Description |
@@ -161,8 +181,10 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 | `groups.json` | Groupes trouvés (format détaillé avec URLs + source) |
 | `urls.json` / `urls_graphql.json` | fbid + URLs |
 | `download-{name}/*.jpg` | Images téléchargées (préfixé par `--name`) |
-| `emails-{name}.csv` | Emails extraits (préfixé par `--name`) |
+| `emails-{name}.csv` | Emails extraits + `raw_text` (préfixé par `--name`) |
+| `enriched-{name}.csv` | Données enrichies par IA (préfixé par `--name`) |
 | `state-{name}.json` | Reprise après interruption (préfixé par `--name`) |
+| `logs-{name}.txt` | Logs individuels (préfixé par `--name`) |
 
 ## Structure
 ```
@@ -180,9 +202,11 @@ facebook-media-ocr.service   # Unite systemd pour le service
 facebook-media-ocr.timer     # Timer systemd (tous les lundis 2h)
 facebook-media-ocr.logrotate # Rotation des logs (logrotate)
 download-{name}/            # Images telechargees (selon --name)
-emails-{name}.csv           # Resultats OCR (selon --name)
+emails-{name}.csv           # Resultats OCR + raw_text (selon --name)
+enriched-{name}.csv         # Enrichissement IA (selon --name)
 state-{name}.json           # Reprise (selon --name)
 logs-{name}.txt             # Logs individuels (mode service)
+facebook-media-ocr.logrotate # Rotation des logs (logrotate)
 ```
 
 ## Compatibilité
@@ -426,19 +450,20 @@ Si vous voulez réduire encore le risque :
 
 #### RAM : adaptation automatique
 
-`run_all.sh` détecte la RAM totale du VPS via `/proc/meminfo` et limite le
-nombre d'instances lancées en parallèle :
+`run_all.sh` détecte la RAM disponible via `/proc/meminfo` (`MemAvailable`) et
+limite le nombre d'instances lancées en parallèle pour ne pas étouffer les
+autres services (kimaki, commune-scraper...) :
 
 ```
-RAM dispo = total - 512 Mo (marge système)
+RAM dispo = MemAvailable - 512 Mo (marge système)
 max = RAM_dispo / 300 Mo (estimation par Chrome headless)
 ```
 
-| RAM VPS | Max instances | 4 groupes | 90+ groupes |
-|---------|---------------|-----------|-------------|
-| 2 Go    | 3             | 3 sur 4   | 3 à la fois |
-| 4 Go    | 11            | Tous      | 11 à la fois |
-| 8 Go    | 25            | Tous      | 25 à la fois |
+| RAM totale | RAM dispo typique | Max instances | 52 groupes |
+|------------|-------------------|---------------|------------|
+| 2 Go       | ~1,2 Go           | 3             | 3 à la fois |
+| 4 Go       | ~3 Go              | 8-12          | 8-12 à la fois |
+| 8 Go       | ~5-7 Go            | 15-25         | Tous si assez de RAM |
 
 Si la RAM est insuffisante pour tout lancer d'un coup, les groupes en attente
 démarreront automatiquement dès qu'une place se libère (quand un groupe
