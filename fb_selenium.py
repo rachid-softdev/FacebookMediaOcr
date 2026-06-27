@@ -19,6 +19,7 @@ import csv
 import json
 import os
 import re
+import shutil
 import sys
 import time
 from pathlib import Path
@@ -343,6 +344,8 @@ class FacebookScraper:
 
         service = Service(chromedriver_path)
         options = webdriver.ChromeOptions()
+        chrome_binary = shutil.which("google-chrome") or shutil.which("google-chrome-stable") or "/usr/bin/google-chrome"
+        options.binary_location = chrome_binary
         if not getattr(self, "no_headless", False):
             options.add_argument("--headless=new")
         options.add_argument("--disable-blink-features=AutomationControlled")
