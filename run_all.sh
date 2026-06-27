@@ -40,10 +40,10 @@ launch_job() {
   local name="$1" gid="$2" mode="$3"
   if [ "$mode" = "--systemd" ]; then
     pkill -f "fb_selenium.py.*--name $name" 2>/dev/null || true
-    nohup python fb_selenium.py --live --name "$name" --group-id "$gid" >> "logs-$name.txt" 2>&1 &
+    nohup python fb_selenium.py --name "$name" --group-id "$gid" >> "logs-$name.txt" 2>&1 &
     echo "  [PID $!] $name"
   else
-    screen -dmS "$name" bash -c "cd $(pwd) && source .venv/bin/activate && python fb_selenium.py --live --name $name --group-id $gid >> logs-$name.txt 2>&1"
+    screen -dmS "$name" bash -c "cd $(pwd) && source .venv/bin/activate && python fb_selenium.py --name $name --group-id $gid >> logs-$name.txt 2>&1"
     echo "  [screen] $name"
   fi
 }
