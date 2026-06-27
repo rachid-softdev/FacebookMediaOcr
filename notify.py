@@ -88,7 +88,8 @@ def notify(status, group="?", script="?", data=None, error=None, webhook=None, m
                 return message_id
             return None
         else:
-            r = requests.post(url, json={"embeds": [embed]}, timeout=10)
+            post_url = url + "?wait=true"
+            r = requests.post(post_url, json={"embeds": [embed]}, timeout=10)
             if r.status_code == 200:
                 return r.json().get("id")
             if r.status_code not in (200, 204):

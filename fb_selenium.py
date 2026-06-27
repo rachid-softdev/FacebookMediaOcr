@@ -1375,8 +1375,11 @@ class FacebookScraper:
 
                 if (idx + 1) - last_update >= UPDATE_INTERVAL or idx == total - 1:
                     email_count = sum(len(r["emails"]) for r in ocr_results)
+                    all_emails = [e for r in ocr_results for e in r["emails"]]
+                    emails_str = ", ".join(all_emails[:20])
                     notify("info", group=gname, script="fb_selenium", message_id=msg_id,
-                           data={"progression": f"{idx+1}/{total}", "emails": email_count})
+                           data={"progression": f"{idx+1}/{total}", "emails": email_count,
+                                 "liste": emails_str or "—"})
                     last_update = idx + 1
 
                 time.sleep(0.5)
@@ -1385,8 +1388,11 @@ class FacebookScraper:
             self._print_ocr_summary(ocr_results)
             clear_state()
             email_count = sum(len(r["emails"]) for r in ocr_results)
-            notify("ok", group=gname, script="fb_selenium",
-                   data={"mode": "live", "photos": total, "emails": email_count}, message_id=msg_id)
+            all_emails = [e for r in ocr_results for e in r["emails"]]
+            emails_str = ", ".join(all_emails[:30])
+            notify("ok", group=gname, script="fb_selenium", message_id=msg_id,
+                   data={"mode": "live", "photos": total, "emails": email_count,
+                         "liste": emails_str or "—"})
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")
