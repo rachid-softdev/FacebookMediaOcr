@@ -145,38 +145,47 @@ try {{
 # --- GraphQL ---------------------------------------------------------------
 
 
+SOCKS_PROXY = "socks5h://127.0.0.1:9050"
+
+
 def graphql_page(lsd, group_id, cursor):
-    """Récupère une page de photos via GraphQL (PowerShell POST)."""
-    variables_json = json.dumps({
+    """Récupère une page de photos via GraphQL (Python requests + Tor SOCKS)."""
+    import requests as _requests
+
+    variables = {
         "count": PAGE_SIZE,
         "cursor": cursor,
         "scale": 1,
         "id": str(group_id),
-    }, separators=(",", ":"))
-
-    ps_script = f'''
-$variables = '{variables_json}'
-$body = @{{
-    lsd = '{lsd}'
-    fb_api_caller_class = 'RelayModern'
-    fb_api_req_friendly_name = '{QUERY_NAME}'
-    server_timestamps = 'true'
-    variables = $variables
-    doc_id = '{DOC_ID}'
-}}
-$r = Invoke-WebRequest -Uri '{GRAPHQL_URL}' -Method POST -Body $body -UserAgent '{UA}' -MaximumRedirection 0 -TimeoutSec 30 -UseBasicParsing
-Write-Output $r.Content
-'''
-    out, _, code = powershell(ps_script, timeout=35)
-    if code != 0 or not out.strip():
+    }
+    data = {
+        "lsd": lsd,
+        "fb_api_caller_class": "RelayModern",
+        "fb_api_req_friendly_name": QUERY_NAME,
+        "server_timestamps": "true",
+        "variables": json.dumps(variables, separators=(",", ":")),
+        "doc_id": DOC_ID,
+    }
+    try:
+        r = _requests.post(
+            GRAPHQL_URL,
+            data=data,
+            headers={"User-Agent": UA},
+            proxies={"https": SOCKS_PROXY, "http": SOCKS_PROXY},
+            timeout=35,
+        )
+        body = r.text
+    except Exception:
         return None, None
 
-    body = out
     if body.startswith("for (;;);"):
         body = body[len("for (;;);"):]
     try:
         result = json.loads(body)
     except json.JSONDecodeError:
+        return None, None
+
+    if "errors" in result:
         return None, None
 
     media = (
