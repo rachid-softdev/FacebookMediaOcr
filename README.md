@@ -146,8 +146,9 @@ all_email_provider_domains.txt.txt  # Liste des domaines email connus
 groups.txt                  # Groupes trouves (format name:group_id)
 groups.json                 # Groupes trouves (format detaille avec URL)
 run_all.sh                  # Lancement parallele (lit groups.txt)
-facebook-media-ocr.service  # Unite systemd pour le service
-facebook-media-ocr.timer    # Timer systemd (tous les lundis 2h)
+facebook-media-ocr.service   # Unite systemd pour le service
+facebook-media-ocr.timer     # Timer systemd (tous les lundis 2h)
+facebook-media-ocr.logrotate # Rotation des logs (logrotate)
 download-{name}/            # Images telechargees (selon --name)
 emails-{name}.csv           # Resultats OCR (selon --name)
 state-{name}.json           # Reprise (selon --name)
@@ -308,6 +309,9 @@ sudo sed -i 's/USERNAME/'"$(whoami)"'/g' facebook-media-ocr.service
 # Copier les fichiers systemd
 sudo cp facebook-media-ocr.service facebook-media-ocr.timer /etc/systemd/system/
 
+# Rotation des logs (evite l'accumulation)
+sudo cp facebook-media-ocr.logrotate /etc/logrotate.d/facebook-media-ocr
+
 # Activer le timer
 sudo systemctl daemon-reload
 sudo systemctl enable facebook-media-ocr.timer
@@ -329,6 +333,11 @@ systemctl list-timers --all | grep facebook
 journalctl -u facebook-media-ocr.service          # Sortie du service
 tail -f logs-saisonniers.txt                       # Log individuel d'un groupe
 ```
+
+**Nettoyage des logs :**
+Les logs individuels (`logs-{name}.txt`) sont automatiquement nettoyés :
+- **Truncate** au début de chaque run (`run_all.sh`) — pas d'accumulation entre deux exécutions
+- **Logrotate** (`/etc/logrotate.d/facebook-media-ocr`) — rotation hebdo, 4 semaines archivées, compression, `copytruncate` pour les runs en cours
 
 **Désactiver :**
 ```bash

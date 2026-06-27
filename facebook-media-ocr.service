@@ -5,8 +5,8 @@ Wants=network-online.target
 
 [Service]
 Type=oneshot
-ExecStart=/home/USERNAME/FacebookMediaOcr/run_all.sh --systemd
-WorkingDirectory=/home/USERNAME/FacebookMediaOcr
-User=USERNAME
+ExecStart=/home/ryzen/projects/FacebookMediaOcr/run_all.sh --systemd
+WorkingDirectory=/home/ryzen/projects/FacebookMediaOcr
+User=ryzen
 StandardOutput=journal
 StandardError=journal

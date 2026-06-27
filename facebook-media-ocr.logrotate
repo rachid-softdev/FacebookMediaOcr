@@ -1,0 +1,9 @@
+/home/ryzen/projects/FacebookMediaOcr/logs-*.txt {
+    weekly
+    rotate 4
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+}

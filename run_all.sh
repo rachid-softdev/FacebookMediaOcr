@@ -17,6 +17,12 @@ fi
 mapfile -t GROUPS < <(grep -v '^\s*#' "$GROUPS_FILE" | grep -v '^\s*$')
 echo "[$(date)] ${#GROUPS[@]} groupes chargés depuis $GROUPS_FILE"
 
+# --- Nettoyage des logs ---
+# On tronque les logs des runs precedents pour eviter l'accumulation
+for name in "${GROUPS[@]%%:*}"; do
+  > "logs-$name.txt" 2>/dev/null || true
+done
+
 # --- Détection RAM pour limiter le parallélisme ---
 # Chaque Chrome headless ~300 Mo. On garde 512 Mo de marge pour le système.
 total_ram_mb=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 1024)
