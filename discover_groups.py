@@ -156,6 +156,19 @@ def try_slug(dept_num, dept_name, slug):
     return None
 
 
+def load_existing():
+    """Charge les departements deja decouverts depuis groups.json."""
+    path = Path(__file__).parent / "groups.json"
+    if not path.exists():
+        return set()
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return {r["dept_num"] for r in data if "dept_num" in r}
+    except (json.JSONDecodeError, KeyError):
+        return set()
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="Decouvre les groupes Facebook Offres d'emploi par departement"
@@ -163,20 +176,28 @@ def main():
     parser.add_argument("--dept", nargs="+", help="Departements specifiques (ex: 01 02 03)")
     parser.add_argument("--dry-run", action="store_true", help="Simulation seulement")
     parser.add_argument("--delay", type=float, default=0.5, help="Delai entre chaque (defaut: 0.5s)")
+    parser.add_argument("--force", action="store_true", help="Re-traite tous les departements meme deja decouverts")
     args = parser.parse_args()
 
     depts = load_departements()
     if args.dept:
         depts = [d for d in depts if d["num"] in args.dept]
 
+    existing = set() if args.force else load_existing()
+    if existing:
+        print(f"[*] {len(existing)} departements deja decouverts, ignores (--force pour tout re-traiter)")
+
     results = []
     found = 0
     empty = 0
+    skipped = 0
 
     for dept in depts:
         dept_num = dept["num"]
-        dept_name = dept["nom"]
-        slug = dept_slug(dept_name)
+        if dept_num in existing:
+            print(f"  [{dept_num}] {dept['nom']}  -> deja traite (ignore)")
+            skipped += 1
+            continue
 
         print(f"\n[{dept_num}] {dept_name}  ({slug})")
 
@@ -210,6 +231,7 @@ def main():
     print(f"\n{'='*50}")
     print(f"OK     : {found}")
     print(f"Echec  : {empty}")
+    print(f"Ignore : {skipped}")
     print(f"Total  : {len(results)} / {len(depts)}")
 
     if args.dry_run:
