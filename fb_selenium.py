@@ -305,8 +305,6 @@ def process_image_ocr(img_path):
         emails = extract_emails(text)
         raw = text.strip().replace("\n", " | ")[:300]
         print(f"    [DEBUG OCR] {raw}")
-        if not emails:
-            return None
         return {
             "file": img_path.name,
             "fbid": img_path.stem,
@@ -1141,19 +1139,28 @@ class FacebookScraper:
         if not ocr_results:
             print("\n[!] Aucun email trouvé.")
             notify("info", group=gname, script="fb_selenium", data={"mode": "ocr-only", "emails": 0, "images": len(images)})
-            return
 
         fieldnames = ["file", "fbid", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
-            for i, email in enumerate(r["emails"]):
+            emails_list = r.get("emails", [])
+            if emails_list:
+                for email in emails_list:
+                    rows.append({
+                        "file": r["file"],
+                        "fbid": r["fbid"],
+                        "email": email,
+                        "all_emails_in_image": ", ".join(emails_list),
+                        "raw_text": raw,
+                    })
+            else:
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
-                    "email": email,
-                    "all_emails_in_image": ", ".join(r["emails"]),
-                    "raw_text": raw if i == 0 else "",
+                    "email": "",
+                    "all_emails_in_image": "",
+                    "raw_text": raw,
                 })
 
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
@@ -1161,9 +1168,10 @@ class FacebookScraper:
             writer.writeheader()
             writer.writerows(rows)
 
-        print(f"\n[OK] {len(rows)} email(s)  ->  {EMAILS_CSV}")
+        email_count = sum(1 for r in rows if r["email"])
+        print(f"\n[OK] {email_count} email(s) sur {len(rows)} images -> {EMAILS_CSV}")
         notify("ok", group=gname, script="fb_selenium",
-               data={"mode": "ocr-only", "emails": len(rows), "images": len(images)})
+               data={"mode": "ocr-only", "emails": email_count, "images": len(images)})
 
     # -- Pipeline live : GraphQL (PowerShell) -> navigation Selenium (full-res) -> OCR page par page
 
@@ -1386,15 +1394,23 @@ class FacebookScraper:
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
-            for email in r["emails"]:
+            emails_list = r.get("emails", [])
+            if emails_list:
+                for email in emails_list:
+                    rows.append({
+                        "file": r["file"],
+                        "fbid": r["fbid"],
+                        "email": email,
+                        "all_emails_in_image": ", ".join(emails_list),
+                        "raw_text": raw,
+                    })
+            else:
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
-                    "email": email,
-                    "all_emails_in_image": ", ".join(r["emails"]),
-                    "raw_text": raw if not any(
-                        row["file"] == r["file"] for row in rows
-                    ) else "",
+                    "email": "",
+                    "all_emails_in_image": "",
+                    "raw_text": raw,
                 })
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
