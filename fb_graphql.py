@@ -155,7 +155,7 @@ def graphql_page(lsd, group_id, cursor):
     variables = {
         "count": PAGE_SIZE,
         "cursor": cursor,
-        "scale": 1,
+        "scale": 10,
         "id": str(group_id),
     }
     data = {
