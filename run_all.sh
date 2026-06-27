@@ -8,19 +8,23 @@ source .venv/bin/activate
 
 # --- Lecture des groupes depuis groups.txt ---
 # Format : nom:group_id (les lignes commençant par # sont ignorées)
-GROUPS_FILE="groups.txt"
-if [ ! -f "$GROUPS_FILE" ]; then
-  echo "[!] $GROUPS_FILE introuvable"
+GROUP_ENTRIES_FILE="groups.txt"
+if [ ! -f "$GROUP_ENTRIES_FILE" ]; then
+  echo "[!] $GROUP_ENTRIES_FILE introuvable"
   exit 1
 fi
 
-mapfile -t GROUPS < <(grep -v '^\s*#' "$GROUPS_FILE" | grep -v '^\s*$')
-echo "[$(date)] ${#GROUPS[@]} groupes chargés depuis $GROUPS_FILE"
+GROUP_ENTRIES=()
+while IFS=: read -r name gid; do
+  [[ -z "$name" || "$name" == \#* ]] && continue
+  GROUP_ENTRIES+=("$name:$gid")
+done < "$GROUP_ENTRIES_FILE"
+echo "[$(date)] ${#GROUP_ENTRIES[@]} groupes chargés depuis $GROUP_ENTRIES_FILE"
 
 # --- Nettoyage des logs ---
 # On tronque les logs des runs precedents pour eviter l'accumulation
-for name in "${GROUPS[@]%%:*}"; do
-  > "logs-$name.txt" 2>/dev/null || true
+for entry in "${GROUP_ENTRIES[@]}"; do
+  > "logs-${entry%%:*}.txt" 2>/dev/null || true
 done
 
 # --- Détection RAM pour limiter le parallélisme ---
@@ -44,9 +48,9 @@ launch_job() {
   fi
 }
 
-total=${#GROUPS[@]}
+total=${#GROUP_ENTRIES[@]}
 idx=0
-for entry in "${GROUPS[@]}"; do
+for entry in "${GROUP_ENTRIES[@]}"; do
   name="${entry%%:*}"
   gid="${entry##*:}"
   idx=$((idx + 1))
