@@ -70,6 +70,7 @@ except ImportError:
 # --- Constantes ------------------------------------------------
 GROUP_ID = "362347087928780"
 GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
+MAX_PAGES = 500
 PHOTO_URL_TPL = "https://www.facebook.com/photo/?fbid={}"
 DOWNLOAD_DIR = "download"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
@@ -1275,7 +1276,7 @@ class FacebookScraper:
             if start_from > 0:
                 print(f"[*] Reprise après {start_from} photos déjà traitées")
 
-        fbids = self._powershell_graphql_fbids(GROUP_ID)
+        fbids = self._powershell_graphql_fbids(GROUP_ID, max_pages=MAX_PAGES)
         if not fbids:
             print("[!] Aucune photo trouvée via GraphQL")
             notify("echec", group=gname, script="fb_selenium", error="Aucune photo via GraphQL")
@@ -1390,6 +1391,8 @@ def main():
                         help="ID du groupe Facebook (defaut: 362347087928780)")
     parser.add_argument("--name", metavar="ETIQUETTE",
                         help="Prefixe pour isolement (state-{name}.json, download-{name}/, ...)")
+    parser.add_argument("--max-pages", type=int, metavar="N",
+                        help="Nombre max de pages GraphQL (defaut: 500)")
     args = parser.parse_args()
 
     if args.group_id:
@@ -1402,6 +1405,10 @@ def main():
         STATE_FILE = f"state-{args.name}.json"
         EMAILS_CSV = f"emails-{args.name}.csv"
         DOWNLOAD_DIR = f"download-{args.name}"
+
+    if args.max_pages:
+        global MAX_PAGES
+        MAX_PAGES = args.max_pages
         print(f"[*] Mode isolé : {STATE_FILE}, {EMAILS_CSV}, {DOWNLOAD_DIR}/")
 
     if args.ocr_only:
