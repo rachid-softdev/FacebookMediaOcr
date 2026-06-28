@@ -249,7 +249,7 @@ def extract_emails(text):
     return result
 
 
-def ocr_photo(img_path):
+def ocr_photo(img_path, url=None):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
@@ -258,6 +258,7 @@ def ocr_photo(img_path):
         return {
             "file": img_path.name,
             "fbid": img_path.stem,
+            "image_url": url or "",
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
         }
@@ -307,7 +308,7 @@ def process_page(entries, page_num, session):
             with open(out_path, "wb") as f:
                 f.write(data)
 
-            res = ocr_photo(out_path)
+            res = ocr_photo(out_path, url=url)
             if res:
                 found.append(res)
                 print(f"{label}  OK  {res['emails']}")
@@ -379,13 +380,14 @@ if __name__ == "__main__":
 
     # Emails
     if all_ocr:
-        fieldnames = ["file", "fbid", "email", "all_emails_in_image"]
+        fieldnames = ["file", "fbid", "image_url", "email", "all_emails_in_image"]
         rows = []
         for r in all_ocr:
             for email in r["emails"]:
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
+                    "image_url": r.get("image_url", ""),
                     "email": email,
                     "all_emails_in_image": ", ".join(r["emails"]),
                 })

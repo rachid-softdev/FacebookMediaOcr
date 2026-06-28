@@ -302,7 +302,7 @@ def extract_emails(text):
     return result
 
 
-def process_image_ocr(img_path):
+def process_image_ocr(img_path, url=None):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
@@ -311,6 +311,7 @@ def process_image_ocr(img_path):
         return {
             "file": img_path.name,
             "fbid": img_path.stem,
+            "image_url": url or "",
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
         }
@@ -1143,7 +1144,7 @@ class FacebookScraper:
             print("\n[!] Aucun email trouvé.")
             notify("info", group=gname, script="fb_selenium", data={"mode": "ocr-only", "emails": 0, "images": len(images)})
 
-        fieldnames = ["file", "fbid", "email", "all_emails_in_image", "raw_text"]
+        fieldnames = ["file", "fbid", "image_url", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
@@ -1153,6 +1154,7 @@ class FacebookScraper:
                     rows.append({
                         "file": r["file"],
                         "fbid": r["fbid"],
+                        "image_url": r.get("image_url", ""),
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
@@ -1161,6 +1163,7 @@ class FacebookScraper:
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
+                    "image_url": r.get("image_url", ""),
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
@@ -1229,7 +1232,7 @@ class FacebookScraper:
             with open(out_path, "wb") as f:
                 f.write(data)
 
-            return process_image_ocr(out_path)
+            return process_image_ocr(out_path, url=url)
         except Exception as e:
             print(f"{label}  ERR {e}")
             return None
@@ -1302,7 +1305,7 @@ class FacebookScraper:
             except Exception:
                 pass
 
-            res = process_image_ocr(out_path)
+            res = process_image_ocr(out_path, url=url)
             if res:
                 print(f"{label}  -> OCR: {res['emails']}")
             else:
@@ -1411,7 +1414,7 @@ class FacebookScraper:
     def _save_ocr_csv(self, ocr_results):
         if not ocr_results:
             return
-        fieldnames = ["file", "fbid", "email", "all_emails_in_image", "raw_text"]
+        fieldnames = ["file", "fbid", "image_url", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
@@ -1421,6 +1424,7 @@ class FacebookScraper:
                     rows.append({
                         "file": r["file"],
                         "fbid": r["fbid"],
+                        "image_url": r.get("image_url", ""),
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
@@ -1429,6 +1433,7 @@ class FacebookScraper:
                 rows.append({
                     "file": r["file"],
                     "fbid": r["fbid"],
+                    "image_url": r.get("image_url", ""),
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
