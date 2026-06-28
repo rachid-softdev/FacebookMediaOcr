@@ -22,6 +22,8 @@ import re
 import shutil
 import sys
 import time
+import subprocess
+from datetime import datetime
 from pathlib import Path
 
 import sys
@@ -300,6 +302,23 @@ def extract_emails(text):
                         result.append(el)
 
     return result
+
+
+def git_push_results(gname):
+    if not gname or gname == "?":
+        return
+    csv_file = f"emails-{gname}.csv"
+    from pathlib import Path as _P
+    if not _P(csv_file).exists():
+        return
+    try:
+        subprocess.run(["git", "add", csv_file], check=True, timeout=30, capture_output=True)
+        msg = f"resultats OCR {gname} - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+        subprocess.run(["git", "commit", "-m", msg], check=False, timeout=30, capture_output=True)
+        subprocess.run(["git", "push"], check=True, timeout=120, capture_output=True)
+        print(f"    [git] push OK -> {csv_file}")
+    except Exception as e:
+        print(f"    [git] push: {e}")
 
 
 def process_image_ocr(img_path, url=None):
@@ -1176,6 +1195,7 @@ class FacebookScraper:
 
         email_count = sum(1 for r in rows if r["email"])
         print(f"\n[OK] {email_count} email(s) sur {len(rows)} images -> {EMAILS_CSV}")
+        git_push_results(gname)
         notify("ok", group=gname, script="fb_selenium",
                data={"mode": "ocr-only", "emails": email_count, "images": len(images)})
 
@@ -1397,6 +1417,7 @@ class FacebookScraper:
             notify("ok", group=gname, script="fb_selenium", message_id=msg_id,
                    data={"mode": "live", "photos": total, "emails": email_count,
                          "liste": emails_str or "—"})
+            git_push_results(gname)
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")
