@@ -321,6 +321,16 @@ def git_push_results(gname):
         print(f"    [git] push: {e}")
 
 
+def cleanup_downloads(gname):
+    if not gname or gname == "?":
+        return
+    import shutil as _su
+    dl_dir = f"download-{gname}"
+    if _su.os.path.isdir(dl_dir):
+        _su.rmtree(dl_dir)
+        print(f"    [cleanup] {dl_dir}/ supprime")
+
+
 def process_image_ocr(img_path, url=None):
     try:
         text = ocr_image(img_path)
@@ -1196,6 +1206,7 @@ class FacebookScraper:
         email_count = sum(1 for r in rows if r["email"])
         print(f"\n[OK] {email_count} email(s) sur {len(rows)} images -> {EMAILS_CSV}")
         git_push_results(gname)
+        cleanup_downloads(gname)
         notify("ok", group=gname, script="fb_selenium",
                data={"mode": "ocr-only", "emails": email_count, "images": len(images)})
 
@@ -1418,6 +1429,7 @@ class FacebookScraper:
                    data={"mode": "live", "photos": total, "emails": email_count,
                          "liste": emails_str or "—"})
             git_push_results(gname)
+            cleanup_downloads(gname)
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")

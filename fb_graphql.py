@@ -13,6 +13,8 @@ import os
 import re
 import argparse
 import csv
+import shutil
+from datetime import datetime
 from pathlib import Path
 
 import requests
@@ -404,6 +406,18 @@ if __name__ == "__main__":
         email_data = {"emails": len(rows), "photos": len(all_entries), "pages": page}
         notify("ok", group=args.group_id, script="fb_graphql", data=email_data)
         print(f"\n[OK] {len(rows)} email(s) -> {EMAILS_CSV}")
+        # Push + nettoyage
+        try:
+            subprocess.run(["git", "add", EMAILS_CSV], check=True, timeout=30, capture_output=True)
+            msg = f"resultats OCR graphql - {datetime.now().strftime('%Y-%m-%d %H:%M')}"
+            subprocess.run(["git", "commit", "-m", msg], check=False, timeout=30, capture_output=True)
+            subprocess.run(["git", "push"], check=True, timeout=120, capture_output=True)
+            print("    [git] push OK")
+        except Exception as e:
+            print(f"    [git] push: {e}")
+        if os.path.isdir(DOWNLOAD_DIR):
+            shutil.rmtree(DOWNLOAD_DIR)
+            print(f"    [cleanup] {DOWNLOAD_DIR}/ supprime")
     else:
         notify("info", group=args.group_id, script="fb_graphql", data={"photos": len(all_entries), "pages": page})
         print(f"\n[!] Aucun email trouvé")
