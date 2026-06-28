@@ -140,7 +140,7 @@ def parse_response(response_text):
 
 def save_enriched(items, name="all"):
     """Sauvegarde le CSV enrichi"""
-    fieldnames = ["file", "fbid", "image_url", "name", "firstname", "phone", "email", "city", "job"]
+    fieldnames = ["file", "fbid", "image_url", "fb_url", "name", "firstname", "phone", "email", "city", "job"]
     filename = f"results/enriched-{name}.csv"
     Path("results").mkdir(exist_ok=True)
     with open(filename, "w", newline="", encoding="utf-8") as f:
@@ -224,6 +224,7 @@ def main():
             enriched["file"] = orig.get("file", enriched["file"])
             enriched["fbid"] = orig.get("fbid", enriched["fbid"])
             enriched["image_url"] = orig.get("image_url", "")
+            enriched["fb_url"] = orig.get("fb_url", f"https://www.facebook.com/photo/?fbid={enriched['fbid']}")
             all_enriched.append(enriched)
 
         print(f"    -> {len(validated)} items valides")

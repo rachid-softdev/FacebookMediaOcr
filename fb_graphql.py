@@ -384,14 +384,17 @@ if __name__ == "__main__":
 
     # Emails
     if all_ocr:
-        fieldnames = ["file", "fbid", "image_url", "email", "all_emails_in_image"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image"]
         rows = []
         for r in all_ocr:
+            fbid = r["fbid"]
+            fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             for email in r["emails"]:
                 rows.append({
                     "file": r["file"],
-                    "fbid": r["fbid"],
+                    "fbid": fbid,
                     "image_url": r.get("image_url", ""),
+                    "fb_url": fb_url,
                     "email": email,
                     "all_emails_in_image": ", ".join(r["emails"]),
                 })

@@ -1174,17 +1174,20 @@ class FacebookScraper:
             print("\n[!] Aucun email trouvé.")
             notify("info", group=gname, script="fb_selenium", data={"mode": "ocr-only", "emails": 0, "images": len(images)})
 
-        fieldnames = ["file", "fbid", "image_url", "email", "all_emails_in_image", "raw_text"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
             emails_list = r.get("emails", [])
+            fbid = r["fbid"]
+            fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             if emails_list:
                 for email in emails_list:
                     rows.append({
                         "file": r["file"],
-                        "fbid": r["fbid"],
+                        "fbid": fbid,
                         "image_url": r.get("image_url", ""),
+                        "fb_url": fb_url,
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
@@ -1192,8 +1195,9 @@ class FacebookScraper:
             else:
                 rows.append({
                     "file": r["file"],
-                    "fbid": r["fbid"],
+                    "fbid": fbid,
                     "image_url": r.get("image_url", ""),
+                    "fb_url": fb_url,
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
@@ -1448,17 +1452,20 @@ class FacebookScraper:
     def _save_ocr_csv(self, ocr_results):
         if not ocr_results:
             return
-        fieldnames = ["file", "fbid", "image_url", "email", "all_emails_in_image", "raw_text"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text"]
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
             emails_list = r.get("emails", [])
+            fbid = r["fbid"]
+            fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             if emails_list:
                 for email in emails_list:
                     rows.append({
                         "file": r["file"],
-                        "fbid": r["fbid"],
+                        "fbid": fbid,
                         "image_url": r.get("image_url", ""),
+                        "fb_url": fb_url,
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
@@ -1466,8 +1473,9 @@ class FacebookScraper:
             else:
                 rows.append({
                     "file": r["file"],
-                    "fbid": r["fbid"],
+                    "fbid": fbid,
                     "image_url": r.get("image_url", ""),
+                    "fb_url": fb_url,
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
