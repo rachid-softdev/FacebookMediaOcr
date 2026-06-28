@@ -141,7 +141,8 @@ def parse_response(response_text):
 def save_enriched(items, name="all"):
     """Sauvegarde le CSV enrichi"""
     fieldnames = ["file", "fbid", "image_url", "name", "firstname", "phone", "email", "city", "job"]
-    filename = f"enriched-{name}.csv"
+    filename = f"results/enriched-{name}.csv"
+    Path("results").mkdir(exist_ok=True)
     with open(filename, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()

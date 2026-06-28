@@ -14,3 +14,11 @@ urls_graphql.json
 fb_cookies*.txt
 *.html
 *.deb
+
+# resultats (sauf les CSV qui sont trackes)
+results/download/
+results/download-*/
+results/state.json
+results/state-*.json
+results/logs-*.txt
+results/urls*

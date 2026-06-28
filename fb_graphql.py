@@ -57,8 +57,9 @@ GRAPHQL_URL = "https://www.facebook.com/api/graphql/"
 from fb_doc_id import DOC_ID, QUERY_NAME
 PAGE_SIZE = 8
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-DOWNLOAD_DIR = "download"
-EMAILS_CSV = "emails.csv"
+RESULTS_DIR = "results"
+DOWNLOAD_DIR = f"{RESULTS_DIR}/download"
+EMAILS_CSV = f"{RESULTS_DIR}/emails.csv"
 EMAIL_RE = re.compile(
     r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}", re.IGNORECASE
 )
@@ -330,11 +331,12 @@ if __name__ == "__main__":
         description="Photos Facebook via GraphQL + OCR (PowerShell)"
     )
     parser.add_argument("group_id", help="ID du groupe Facebook")
-    parser.add_argument("--save", default="urls_graphql.json",
+    parser.add_argument("--save", default="results/urls_graphql.json",
                         help="Fichier de sortie des URLs")
     parser.add_argument("--pages", type=int, default=1000,
                         help="Nombre max de pages")
     args = parser.parse_args()
+    Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 
     print("[*] Connexion…")
     lsd, resolved_id = fetch_lsd(args.group_id)

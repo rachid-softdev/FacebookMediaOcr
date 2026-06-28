@@ -77,11 +77,12 @@ GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
 MAX_PAGES = 500
 GROUP_NAME = None
 PHOTO_URL_TPL = "https://www.facebook.com/photo/?fbid={}"
-DOWNLOAD_DIR = "download"
+RESULTS_DIR = "results"
+DOWNLOAD_DIR = f"{RESULTS_DIR}/download"
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36"
-STATE_FILE = "state.json"
-RESULTS_FILE = "urls.json"
-EMAILS_CSV = "emails.csv"
+STATE_FILE = f"{RESULTS_DIR}/state.json"
+RESULTS_FILE = f"{RESULTS_DIR}/urls.json"
+EMAILS_CSV = f"{RESULTS_DIR}/emails.csv"
 BATCH_SIZE = 200
 UPDATE_INTERVAL = 60
 STAGNANT_MAX = 20
@@ -307,7 +308,7 @@ def extract_emails(text):
 def git_push_results(gname):
     if not gname or gname == "?":
         return
-    csv_file = f"emails-{gname}.csv"
+    csv_file = f"results/emails-{gname}.csv"
     from pathlib import Path as _P
     if not _P(csv_file).exists():
         return
@@ -325,7 +326,7 @@ def cleanup_downloads(gname):
     if not gname or gname == "?":
         return
     import shutil as _su
-    dl_dir = f"download-{gname}"
+    dl_dir = f"results/download-{gname}"
     if _su.os.path.isdir(dl_dir):
         _su.rmtree(dl_dir)
         print(f"    [cleanup] {dl_dir}/ supprime")
@@ -1509,6 +1510,7 @@ def main():
     parser.add_argument("--max-pages", type=int, metavar="N",
                         help="Nombre max de pages GraphQL (defaut: 500)")
     args = parser.parse_args()
+    Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 
     if args.group_id:
         global GROUP_ID, GROUP_MEDIA_URL
@@ -1517,15 +1519,15 @@ def main():
 
     if args.name:
         global STATE_FILE, EMAILS_CSV, DOWNLOAD_DIR, GROUP_NAME
-        STATE_FILE = f"state-{args.name}.json"
-        EMAILS_CSV = f"emails-{args.name}.csv"
-        DOWNLOAD_DIR = f"download-{args.name}"
+        STATE_FILE = f"{RESULTS_DIR}/state-{args.name}.json"
+        EMAILS_CSV = f"{RESULTS_DIR}/emails-{args.name}.csv"
+        DOWNLOAD_DIR = f"{RESULTS_DIR}/download-{args.name}"
         GROUP_NAME = args.name
 
     if args.max_pages:
         global MAX_PAGES
         MAX_PAGES = args.max_pages
-        print(f"[*] Mode isolé : {STATE_FILE}, {EMAILS_CSV}, {DOWNLOAD_DIR}/")
+    print(f"[*] Mode isolé : {STATE_FILE}, {EMAILS_CSV}, {DOWNLOAD_DIR}/")
 
     if args.ocr_only:
         print("[*] Mode OCR seul")
