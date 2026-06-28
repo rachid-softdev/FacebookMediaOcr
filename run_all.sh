@@ -12,7 +12,7 @@ source .venv/bin/activate
 unset LD_PRELOAD
 
 # --- Lecture des groupes depuis groups.txt ---
-GROUP_ENTRIES_FILE="groups.txt"
+GROUP_ENTRIES_FILE="data/groups.txt"
 if [ ! -f "$GROUP_ENTRIES_FILE" ]; then
   echo "[!] $GROUP_ENTRIES_FILE introuvable"
   exit 1

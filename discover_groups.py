@@ -29,7 +29,7 @@ PATTERNS = [
 
 
 def load_departements():
-    path = Path(__file__).parent / "departements.json"
+    path = Path(__file__).parent / "data/departements.json"
     if not path.exists():
         print(f"[!] {path} introuvable")
         sys.exit(1)
@@ -160,7 +160,7 @@ def try_slug(dept_num, dept_name, slug):
 
 def load_existing():
     """Charge les departements deja decouverts depuis groups.json."""
-    path = Path(__file__).parent / "groups.json"
+    path = Path(__file__).parent / "data/groups.json"
     if not path.exists():
         return set()
     try:
@@ -226,12 +226,13 @@ def main():
             notify("echec", group=dept_num, script="discover_groups",
                    data={"dept": dept_name, "slug": slug})
 
+        Path("data").mkdir(exist_ok=True)
         if not args.dry_run:
-            Path("groups.txt").write_text(
+            Path("data/groups.txt").write_text(
                 "\n".join(f"{r['name']}:{r['group_id']}" for r in results) + "\n",
                 encoding="utf-8",
             )
-            Path("groups.json").write_text(
+            Path("data/groups.json").write_text(
                 json.dumps(results, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
