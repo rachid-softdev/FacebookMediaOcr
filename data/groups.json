@@ -466,5 +466,86 @@
     "dept_num": "95",
     "dept_name": "Val-d'Oise",
     "source": "pattern"
+  },
+  {
+    "name": "saisonniers",
+    "group_id": "362347087928780",
+    "slug": "362347087928780",
+    "url": "https://www.facebook.com/groups/362347087928780/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group677340786326961",
+    "group_id": "677340786326961",
+    "slug": "677340786326961",
+    "url": "https://www.facebook.com/groups/677340786326961/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group767882211778060",
+    "group_id": "767882211778060",
+    "slug": "767882211778060",
+    "url": "https://www.facebook.com/groups/767882211778060/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group2686291441436189",
+    "group_id": "2686291441436189",
+    "slug": "2686291441436189",
+    "url": "https://www.facebook.com/groups/2686291441436189/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "ardennes",
+    "group_id": "1162293797121851",
+    "slug": "offres.d.emploi.ardennes",
+    "url": "https://www.facebook.com/groups/offres.d.emploi.ardennes/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group752431996774137",
+    "group_id": "752431996774137",
+    "slug": "752431996774137",
+    "url": "https://www.facebook.com/groups/752431996774137/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group377308495667774",
+    "group_id": "377308495667774",
+    "slug": "377308495667774",
+    "url": "https://www.facebook.com/groups/377308495667774/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "jobenisere",
+    "group_id": "494967597750604",
+    "slug": "jobenisere",
+    "url": "https://www.facebook.com/groups/jobenisere/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group1685309705069955",
+    "group_id": "1685309705069955",
+    "slug": "1685309705069955",
+    "url": "https://www.facebook.com/groups/1685309705069955/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]

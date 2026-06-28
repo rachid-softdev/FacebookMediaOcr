@@ -1,0 +1,12 @@
+[Unit]
+Description=Facebook Media OCR - Discover new groups via Google (monthly)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/home/ryzen/projects/FacebookMediaOcr/discover_groups.sh
+WorkingDirectory=/home/ryzen/projects/FacebookMediaOcr
+User=ryzen
+StandardOutput=journal
+StandardError=journal

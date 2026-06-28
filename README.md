@@ -146,15 +146,33 @@ python discover_groups.py --dry-run
 
 # Forcer le re-traitement des departements deja decouverts
 python discover_groups.py --force
+
+# Google uniquement, sans essayer le pattern
+python discover_groups.py --search-only
 ```
 
 Stratégie :
 1. Charge `departements.json` (101 départements)
-2. Ignore les départements déjà dans `groups.json` (sauf `--force`)
+2. Ignore les départements déjà dans `groups.json` (sauf `--force`) — les résultats existants sont **conservés et fusionnés** avec les nouveaux
 3. Génère le slug attendu `offres.d.emploi.{departement}` (ex: `offres.d.emploi.ain`)
 4. Vérifie son existence via PowerShell
 5. Si trouvé → résout l'ID numérique + vérifie l'API GraphQL
-6. Enregistre dans `groups.json` + `groups.txt`
+6. **Si le pattern échoue** → fallback recherche **Google via Selenium** (Chrome headless) avec la requête `"offres d emploi" facebook groupe {num} {nom}`, première page uniquement
+7. Les URLs Facebook trouvées sont vérifiées une par une (existence + ID + GraphQL)
+8. Enregistre dans `groups.json` + `groups.txt` (fusionné avec l'existant, jamais d'écrasement)
+
+Options :
+- `--search-only` : saute l'étape pattern, va directement sur Google
+- `--force` : ignore les déjà découverts, retraite tout depuis zéro
+- `--dry-run` : simulation seule (n'écrit pas les fichiers)
+- `--dept 01 02 03` : départements spécifiques uniquement
+
+Comportement au re-lancement :
+| Scenario | Résultat |
+|----------|----------|
+| `python discover_groups.py` | Charge l'existant, ignore les déjà trouvés, **ajoute les nouveaux** |
+| `python discover_groups.py --force` | Retraite tout, **remplace** les fichiers |
+| `python discover_groups.py --search-only --dept 13` | Cherche sur Google pour le 13 seulement, fusionné avec l'existant |
 
 Produit :
 - `groups.txt` : pour `run_all.sh` (format `name:group_id`)
@@ -189,6 +207,9 @@ Filtre : seul `domain.tld` présent dans `all_email_provider_domains.txt.txt` (6
 |---------|-------------|
 | `groups.txt` | Groupes trouvés (name:group_id, pour run_all.sh) |
 | `groups.json` | Groupes trouvés (format détaillé avec URLs + source) |
+| `discover_groups.sh` | Script de découverte mensuelle (Google search) |
+| `facebook-discover-groups.service` | Service systemd pour la découverte mensuelle |
+| `facebook-discover-groups.timer` | Timer systemd : 1er lundi du mois à 00h |
 | `urls.json` / `urls_graphql.json` | fbid + URLs |
 | `download-{name}/*.jpg` | Images téléchargées (préfixé par `--name`) |
 | `emails-{name}.csv` | Emails extraits + `raw_text` (préfixé par `--name`) |
@@ -211,7 +232,10 @@ run_all.sh                  # Lancement parallele (lit groups.txt)
 enrich.py                   # Enrichissement OCR par IA (nom, prenom, tel, ville...)
 fb_doc_id.py                # Auto-découverte du doc_id GraphQL (Selenium + CDP)
 AGENTS.md                   # Documentation technique (context memory)
-facebook-media-ocr.service   # Unite systemd pour le service
+discover_groups.sh            # Script de decouverte mensuelle (Google search)
+facebook-discover-groups.service  # Service systemd pour la decouverte mensuelle
+facebook-discover-groups.timer    # Timer systemd : 1er lundi du mois a 00h
+facebook-media-ocr.service   # Unite systemd pour le service hebdomadaire
 facebook-media-ocr.timer     # Timer systemd (tous les lundis 2h)
 facebook-media-ocr.logrotate # Rotation des logs (logrotate)
 download-{name}/            # Images telechargees (selon --name)
@@ -412,6 +436,52 @@ Les logs individuels (`logs-{name}.txt`) sont automatiquement nettoyés :
 ```bash
 sudo systemctl stop facebook-media-ocr.timer
 sudo systemctl disable facebook-media-ocr.timer
+```
+
+### 5b. Découverte mensuelle des nouveaux groupes (systemd timer)
+
+Un timer séparé lance `discover_groups.py --search-only` le **1er lundi de chaque mois à 00h00**,
+juste avant le scrape hebdomadaire (02h00), pour découvrir automatiquement les nouveaux
+groupes Facebook sans intervention manuelle.
+
+Fichiers fournis dans le repo :
+
+```
+discover_groups.sh            # Script de decouverte (Google search)
+facebook-discover-groups.service  # Service oneshot
+facebook-discover-groups.timer    # Timer : 1er lundi du mois a 00h
+```
+
+**Installation :**
+
+```bash
+# Copier les fichiers systemd
+sudo cp facebook-discover-groups.service facebook-discover-groups.timer /etc/systemd/system/
+
+# Activer le timer
+sudo systemctl daemon-reload
+sudo systemctl enable facebook-discover-groups.timer
+sudo systemctl start facebook-discover-groups.timer
+
+# Vérifier
+sudo systemctl status facebook-discover-groups.timer
+systemctl list-timers --all | grep discover
+```
+
+**Chronologie un 1er lundi du mois :**
+
+```
+00:00 → discover_groups.sh (recherche Google des nouveaux groupes)
+02:00 → run_all.sh (scraping photos des groupes)
+```
+
+Les résultats de `discover_groups.sh` sont dans `results/discover-groups-YYYYMMDD-HHMMSS.txt`.
+
+**Désactiver :**
+
+```bash
+sudo systemctl stop facebook-discover-groups.timer
+sudo systemctl disable facebook-discover-groups.timer
 ```
 
 ### 6. Mise à jour du code

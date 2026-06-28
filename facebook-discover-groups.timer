@@ -1,0 +1,12 @@
+[Unit]
+Description=Facebook Media OCR - Decouverte groupes mensuelle (1er lundi du mois)
+Requires=facebook-discover-groups.service
+
+[Timer]
+# 1er lundi de chaque mois a 00:00
+OnCalendar=Mon *-*-1..7 00:00:00
+Persistent=true
+RandomizedDelaySec=5m
+
+[Install]
+WantedBy=timers.target

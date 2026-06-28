@@ -5,11 +5,15 @@ Discover Facebook job groups for each French department.
 Pour chaque departement : tente le pattern `offres.d.emploi.{slug}`,
 verifie que la page existe, extrait l'ID numerique, et verifie que
 l'API GraphQL repond (photos publiques accessibles).
+En echec : fallback recherche Google (Selenium) pour trouver des URLs
+de groupes Facebook.
 
 Usage:
     python discover_groups.py                  # Tous les departements
     python discover_groups.py --dept 75 92 93  # Departements specifiques
     python discover_groups.py --dry-run        # Simulation seulement
+    python discover_groups.py --search-only    # Google uniquement, sans pattern
+    python discover_groups.py --force          # Re-traite tout
 """
 
 import sys
@@ -76,7 +80,6 @@ try {{
 
 def resolve_group_id(slug):
     """Resout l'ID numerique du groupe via fetch_lsd."""
-
     if slug.isdigit():
         return slug
     _, resolved = fetch_lsd(slug)
@@ -158,17 +161,98 @@ def try_slug(dept_num, dept_name, slug):
     return None
 
 
+def create_web_driver():
+    """Cree un driver Chrome headless avec anti-detection."""
+    from selenium import webdriver
+    from selenium.webdriver.chrome.options import Options
+    import random
+
+    ua = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    )
+
+    opts = Options()
+    opts.add_argument("--headless=new")
+    opts.add_argument("--no-sandbox")
+    opts.add_argument("--disable-dev-shm-usage")
+    opts.add_argument("--disable-blink-features=AutomationControlled")
+    opts.add_argument("--disable-infobars")
+    opts.add_argument("--disable-gpu")
+    opts.add_argument("--window-size=1920,1080")
+    opts.add_argument("--lang=fr-FR")
+    opts.add_argument(f"user-agent={ua}")
+    opts.add_argument("--disable-background-networking")
+    opts.add_argument("--disable-sync")
+    opts.add_argument("--no-first-run")
+    opts.add_argument("--disable-breakpad")
+    opts.add_experimental_option("excludeSwitches", ["enable-automation"])
+    opts.add_experimental_option("useAutomationExtension", False)
+
+    driver = webdriver.Chrome(options=opts)
+    driver.execute_cdp_cmd("Network.setUserAgentOverride", {"userAgent": ua})
+    driver.execute_script(
+        "Object.defineProperty(navigator, 'webdriver', {get: () => undefined})"
+    )
+
+    driver.get("https://www.google.com")
+    time.sleep(random.uniform(2, 4))
+
+    return driver
+
+
+def search_google(driver, dept_num, dept_name):
+    """Cherche sur Google des groupes Facebook pour ce departement via Selenium."""
+    from urllib.parse import quote
+    import random
+
+    query = f'"offres d emploi" facebook groupe {dept_num} {dept_name}'
+    print(f"  Google: {query} ... ", end="", flush=True)
+
+    driver.get(f"https://www.google.com/search?q={quote(query)}&hl=fr")
+    time.sleep(random.uniform(3, 5))
+
+    if "sorry" in driver.current_url.lower():
+        print("CAPTCHA (bloque)")
+        return []
+
+    links = driver.find_elements("tag name", "a")
+    fb_urls = []
+    for a in links:
+        href = a.get_attribute("href")
+        if href and "facebook.com/groups/" in href:
+            fb_urls.append(href)
+            if len(fb_urls) >= 10:
+                break
+
+    fb_urls = list(dict.fromkeys(fb_urls))
+
+    if fb_urls:
+        print(f"{len(fb_urls)} URLs trouvees")
+    else:
+        print("rien trouve")
+
+    return fb_urls
+
+
+def extract_group_slug(url):
+    """Extrait le slug d'une URL Facebook groups."""
+    m = re.search(r"(?:www\.)?facebook\.com/groups/([^/\?#]+)", url)
+    return m.group(1) if m else None
+
+
 def load_existing():
-    """Charge les departements deja decouverts depuis groups.json."""
+    """Charge les groupes deja decouverts depuis groups.json."""
     path = Path(__file__).parent / "data/groups.json"
     if not path.exists():
-        return set()
+        return [], set()
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
-        return {r["dept_num"] for r in data if "dept_num" in r}
+        existing_depts = {r["dept_num"] for r in data if "dept_num" in r}
+        return data, existing_depts
     except (json.JSONDecodeError, KeyError):
-        return set()
+        return [], set()
 
 
 def main():
@@ -179,47 +263,111 @@ def main():
     parser.add_argument("--dry-run", action="store_true", help="Simulation seulement")
     parser.add_argument("--delay", type=float, default=0.5, help="Delai entre chaque (defaut: 0.5s)")
     parser.add_argument("--force", action="store_true", help="Re-traite tous les departements meme deja decouverts")
+    parser.add_argument("--search-only", action="store_true", help="Google uniquement, sans pattern")
     args = parser.parse_args()
 
     depts = load_departements()
     if args.dept:
         depts = [d for d in depts if d["num"] in args.dept]
 
-    existing = set() if args.force else load_existing()
-    if existing:
-        print(f"[*] {len(existing)} departements deja decouverts, ignores (--force pour tout re-traiter)")
+    if args.force:
+        existing_data = []
+        existing_depts = set()
+    else:
+        existing_data, existing_depts = load_existing()
 
-    results = []
+    results = list(existing_data)
+
+    if existing_depts:
+        print(f"[*] {len(existing_depts)} departements deja decouverts, ignores (--force pour tout re-traiter)")
+
     found = 0
     empty = 0
     skipped = 0
 
-    notify("debut", script="discover_groups", data={"departements": len(depts), "deja_trouves": len(existing) or None})
+    notify("debut", script="discover_groups", data={
+        "departements": len(depts), "deja_trouves": len(existing_depts) or None
+    })
+
+    driver = None
 
     for dept in depts:
         dept_num = dept["num"]
-        if dept_num in existing:
+
+        if dept_num in existing_depts:
             print(f"  [{dept_num}] {dept['nom']}  -> deja traite (ignore)")
             skipped += 1
             continue
 
         dept_name = dept["nom"]
         slug = dept_slug(dept_name)
-        print(f"\n[{dept_num}] {dept_name}  ({slug})")
+        name = f"emploi{dept_num}"
+        result = None
 
-        result = try_slug(dept_num, dept_name, slug)
+        if not args.search_only:
+            print(f"\n[{dept_num}] {dept_name}  ({slug})")
+            result = try_slug(dept_num, dept_name, slug)
+        else:
+            print(f"\n[{dept_num}] {dept_name}  (search only)")
+
+        if result is None:
+            if driver is None:
+                print("  Lancement Chrome...")
+                driver = create_web_driver()
+
+            urls = search_google(driver, dept_num, dept_name)
+            for url in urls:
+                group_slug = extract_group_slug(url)
+                if not group_slug:
+                    continue
+
+                print(f"  Check: {group_slug} ... ", end="", flush=True)
+
+                if not group_exists(group_slug):
+                    print("inaccessible")
+                    continue
+
+                lsd, gid = fetch_lsd(group_slug)
+                if not lsd:
+                    print("LSD absent")
+                    continue
+                if not gid:
+                    print("ID non resoluble")
+                    continue
+                if gid == group_slug and not group_slug.isdigit():
+                    print("ID non resoluble")
+                    continue
+
+                print(f"ID={gid} ... ", end="", flush=True)
+
+                if not graphql_works(lsd, gid):
+                    print("GraphQL echoue")
+                    continue
+
+                print("OK")
+                result = {
+                    "name": name,
+                    "group_id": gid,
+                    "slug": group_slug,
+                    "url": f"https://www.facebook.com/groups/{group_slug}",
+                    "dept_num": dept_num,
+                    "dept_name": dept_name,
+                    "source": "search",
+                }
+                break
+
         if result:
             gid = result["group_id"]
             existing = [r for r in results if r["group_id"] == gid]
             if existing:
                 print(f"  => ID {gid} deja utilise par {existing[0]['dept_name']} (ignore)")
                 empty += 1
-                continue
-            results.append(result)
-            found += 1
-            print(f"  => {gid}")
-            notify("ok", group=result["name"], script="discover_groups",
-                   data={"gid": gid, "slug": result["slug"]})
+            else:
+                results.append(result)
+                found += 1
+                print(f"  => {gid}")
+                notify("ok", group=result["name"], script="discover_groups",
+                       data={"gid": gid, "slug": result["slug"]})
         else:
             empty += 1
             print(f"  => [echec]")
@@ -239,6 +387,9 @@ def main():
 
         time.sleep(args.delay)
 
+    if driver is not None:
+        driver.quit()
+
     notify("ok" if found else "info", script="discover_groups",
            data={"trouves": found, "echecs": empty, "ignores": skipped, "total": len(depts)})
 
@@ -252,7 +403,6 @@ def main():
         print("\n--- groups.txt ---")
         for r in results:
             print(f"{r['name']}:{r['group_id']}")
-
     else:
         print(f"Fichiers: groups.txt ({len(results)} lignes), groups.json")
 
