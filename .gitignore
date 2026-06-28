@@ -8,13 +8,9 @@ __pycache__/
 *.pyo
 state.json
 state-*.json
-emails.csv
-emails-*.csv
 logs-*.txt
-enriched-*.csv
 urls.json
 urls_graphql.json
 fb_cookies*.txt
 *.html
 *.deb
-all_emails.csv
