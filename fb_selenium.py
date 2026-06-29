@@ -76,6 +76,7 @@ GROUP_ID = "362347087928780"
 GROUP_MEDIA_URL = f"https://www.facebook.com/groups/{GROUP_ID}/media"
 MAX_PAGES = 500
 GROUP_NAME = None
+GROUP_POS = None
 PHOTO_URL_TPL = "https://www.facebook.com/photo/?fbid={}"
 RESULTS_DIR = "results"
 DOWNLOAD_DIR = f"{RESULTS_DIR}/download"
@@ -1138,7 +1139,7 @@ class FacebookScraper:
         """Phase 4 : OCR sur les images téléchargées, génère emails.csv.
         Utilisable aussi en solo (mode --ocr-only)."""
         gname = GROUP_NAME or f"grp{GROUP_ID}"
-        notify("debut", group=gname, script="fb_selenium", data={"mode": "ocr-only", "dossier": download_dir})
+        notify("debut", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "ocr-only", "dossier": download_dir})
         print(f"\n{'='*50}")
         print("Phase 4 : OCR — Extraction des emails")
         print(f"{'='*50}")
@@ -1146,7 +1147,7 @@ class FacebookScraper:
         img_dir = Path(download_dir)
         if not img_dir.exists():
             print("[!] Dossier d'images introuvable.")
-            notify("echec", group=gname, script="fb_selenium", error="Dossier introuvable")
+            notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error="Dossier introuvable")
             return
 
         images = sorted(
@@ -1155,7 +1156,7 @@ class FacebookScraper:
         )
         if not images:
             print("[!] Aucune image trouvée.")
-            notify("echec", group=gname, script="fb_selenium", error="Aucune image")
+            notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error="Aucune image")
             return
 
         print(f"  {len(images)} image(s) à analyser\n")
@@ -1172,7 +1173,7 @@ class FacebookScraper:
 
         if not ocr_results:
             print("\n[!] Aucun email trouvé.")
-            notify("info", group=gname, script="fb_selenium", data={"mode": "ocr-only", "emails": 0, "images": len(images)})
+            notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "ocr-only", "emails": 0, "images": len(images)})
 
         fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text"]
         rows = []
@@ -1212,7 +1213,7 @@ class FacebookScraper:
         print(f"\n[OK] {email_count} email(s) sur {len(rows)} images -> {EMAILS_CSV}")
         git_push_results(gname)
         cleanup_downloads(gname)
-        notify("ok", group=gname, script="fb_selenium",
+        notify("ok", group=gname, script="fb_selenium", group_pos=GROUP_POS,
                data={"mode": "ocr-only", "emails": email_count, "images": len(images)})
 
     # -- Pipeline live : GraphQL (PowerShell) -> navigation Selenium (full-res) -> OCR page par page
@@ -1356,7 +1357,7 @@ class FacebookScraper:
         import subprocess as _sp
 
         gname = GROUP_NAME or f"grp{GROUP_ID}"
-        msg_id = notify("debut", group=gname, script="fb_selenium", data={"mode": "live"})
+        msg_id = notify("debut", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "live"})
 
         state = load_state()
         start_from = 0
@@ -1370,7 +1371,7 @@ class FacebookScraper:
         fbids = self._powershell_graphql_fbids(GROUP_ID, max_pages=MAX_PAGES)
         if not fbids:
             print("[!] Aucune photo trouvée via GraphQL")
-            notify("echec", group=gname, script="fb_selenium", error="Aucune photo via GraphQL", message_id=msg_id)
+            notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error="Aucune photo via GraphQL", message_id=msg_id)
             return
 
         total = len(fbids)
@@ -1380,7 +1381,7 @@ class FacebookScraper:
             self._print_ocr_summary(ocr_results)
             clear_state()
             email_count = sum(len(r["emails"]) for r in ocr_results)
-            notify("ok", group=gname, script="fb_selenium",
+            notify("ok", group=gname, script="fb_selenium", group_pos=GROUP_POS,
                    data={"deja_traite": True, "emails": email_count}, message_id=msg_id)
             return
 
@@ -1417,7 +1418,7 @@ class FacebookScraper:
                     email_count = sum(len(r["emails"]) for r in ocr_results)
                     all_emails = [e for r in ocr_results for e in r["emails"]]
                     emails_str = ", ".join(all_emails[:20])
-                    notify("info", group=gname, script="fb_selenium", message_id=msg_id,
+                    notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS, message_id=msg_id,
                            data={"progression": f"{idx+1}/{total}", "emails": email_count,
                                  "liste": emails_str or "—"})
                     last_update = idx + 1
@@ -1430,7 +1431,7 @@ class FacebookScraper:
             email_count = sum(len(r["emails"]) for r in ocr_results)
             all_emails = [e for r in ocr_results for e in r["emails"]]
             emails_str = ", ".join(all_emails[:30])
-            notify("ok", group=gname, script="fb_selenium", message_id=msg_id,
+            notify("ok", group=gname, script="fb_selenium", group_pos=GROUP_POS, message_id=msg_id,
                    data={"mode": "live", "photos": total, "emails": email_count,
                          "liste": emails_str or "—"})
             git_push_results(gname)
@@ -1440,13 +1441,13 @@ class FacebookScraper:
             print("\n[!] Interrompu par l'utilisateur")
             save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
-            notify("info", group=gname, script="fb_selenium",
+            notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS,
                    data={"interrompu": True, "processed": idx}, message_id=msg_id)
         except Exception as e:
             print(f"\n[!] Erreur : {e}")
             save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
-            notify("echec", group=gname, script="fb_selenium", error=str(e), message_id=msg_id)
+            notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error=str(e), message_id=msg_id)
             raise
 
     def _save_ocr_csv(self, ocr_results):
@@ -1517,6 +1518,8 @@ def main():
                         help="Prefixe pour isolement (state-{name}.json, download-{name}/, ...)")
     parser.add_argument("--max-pages", type=int, metavar="N",
                         help="Nombre max de pages GraphQL (defaut: 500)")
+    parser.add_argument("--group-pos", metavar="X/Y",
+                        help="Position du groupe dans la liste (ex: 15/83)")
     args = parser.parse_args()
     Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 
@@ -1531,6 +1534,10 @@ def main():
         EMAILS_CSV = f"{RESULTS_DIR}/emails-{args.name}.csv"
         DOWNLOAD_DIR = f"{RESULTS_DIR}/download-{args.name}"
         GROUP_NAME = args.name
+
+    if args.group_pos:
+        global GROUP_POS
+        GROUP_POS = args.group_pos
 
     if args.max_pages:
         global MAX_PAGES

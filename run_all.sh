@@ -52,13 +52,13 @@ set -e
 echo "[$(date)] doc_id OK"
 
 launch_job() {
-  local name="$1" gid="$2" mode="$3"
+  local name="$1" gid="$2" mode="$3" extra_flag="$4" extra_val="$5"
   if [ "$mode" = "systemd" ]; then
     pkill -f "fb_selenium.py.*--name $name" 2>/dev/null || true
-    nohup python fb_selenium.py --name "$name" --group-id "$gid" >> "results/logs-$name.txt" 2>&1 &
+    nohup python fb_selenium.py --name "$name" --group-id "$gid" $extra_flag "$extra_val" >> "results/logs-$name.txt" 2>&1 &
     echo "  [PID $!] $name"
   else
-    screen -dmS "$name" bash -c "cd $(pwd) && source .venv/bin/activate && python fb_selenium.py --name $name --group-id $gid >> results/logs-$name.txt 2>&1"
+    screen -dmS "$name" bash -c "cd $(pwd) && source .venv/bin/activate && python fb_selenium.py --name $name --group-id $gid $extra_flag $extra_val >> results/logs-$name.txt 2>&1"
     echo "  [screen] $name"
   fi
 }
@@ -84,7 +84,7 @@ for entry in "${GROUP_ENTRIES[@]}"; do
   done
 
   printf "  [%3d/%d] %s -> %s\n" "$idx" "$total" "$name" "$gid"
-  launch_job "$name" "$gid" "$mode"
+  launch_job "$name" "$gid" "$mode" "--group-pos" "$idx/$total"
   sleep 2  # laisser le temps au screen de s'enregistrer
 done
 

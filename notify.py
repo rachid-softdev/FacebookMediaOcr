@@ -11,6 +11,7 @@ WEBHOOK_URL = "https://discord.com/api/webhooks/1520368125994860624/xpcNpvHK2sKc
 
 _webhook_parts = None
 _last_error = None
+_start_times = {}
 
 
 def _parse_webhook(url):
@@ -20,7 +21,7 @@ def _parse_webhook(url):
     return None, None
 
 
-def notify(status, group="?", script="?", data=None, error=None, webhook=None, message_id=None):
+def notify(status, group="?", script="?", data=None, error=None, webhook=None, message_id=None, group_pos=None):
     """Envoie ou édite une notification Discord.
 
     Retourne le message_id (pour édition ultérieure) ou None.
@@ -31,6 +32,7 @@ def notify(status, group="?", script="?", data=None, error=None, webhook=None, m
     data       : dict avec infos supplémentaires
     error      : message d'erreur (pour status="echec")
     message_id : si fourni, édite le message existant au lieu d'en créer un
+    group_pos  : position du groupe dans la liste (ex: "15/83")
     """
     if requests is None:
         return None
@@ -56,21 +58,35 @@ def notify(status, group="?", script="?", data=None, error=None, webhook=None, m
         "info":  "Information",
     }
 
-    fields = []
+    base_fields = [
+        {"name": "Script", "value": script, "inline": True},
+        {"name": "Groupe", "value": str(group), "inline": True},
+    ]
+    if group_pos:
+        base_fields.append({"name": "Groupe", "value": group_pos, "inline": True})
+    base_fields.append({"name": "Heure", "value": datetime.now().strftime("%H:%M:%S"), "inline": True})
+    if message_id and message_id in _start_times:
+        elapsed = datetime.now() - _start_times[message_id]
+        total_seconds = int(elapsed.total_seconds())
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        if hours:
+            temps_str = f"{hours}:{minutes:02d}:{seconds:02d}"
+        else:
+            temps_str = f"{minutes}:{seconds:02d}"
+        base_fields.append({"name": "Temps", "value": temps_str, "inline": True})
+
+    data_fields = []
     if data:
         for k, v in data.items():
-            fields.append({"name": k, "value": str(v), "inline": True})
+            data_fields.append({"name": k, "value": str(v), "inline": True})
     if error:
-        fields.append({"name": "Erreur", "value": error[:1000], "inline": False})
+        data_fields.append({"name": "Erreur", "value": error[:1000], "inline": False})
 
     embed = {
         "title": f"{emojis.get(status, '')} {desc.get(status, status)}",
         "color": colors.get(status, 0x95A5A6),
-        "fields": [
-            {"name": "Script", "value": script, "inline": True},
-            {"name": "Groupe", "value": str(group), "inline": True},
-            {"name": "Heure", "value": datetime.now().strftime("%H:%M:%S"), "inline": True},
-        ] + fields,
+        "fields": base_fields + data_fields,
         "footer": {"text": "Facebook Media OCR"},
     }
 
@@ -91,7 +107,10 @@ def notify(status, group="?", script="?", data=None, error=None, webhook=None, m
             post_url = url + "?wait=true"
             r = requests.post(post_url, json={"embeds": [embed]}, timeout=10)
             if r.status_code == 200:
-                return r.json().get("id")
+                new_id = r.json().get("id")
+                if new_id:
+                    _start_times[new_id] = datetime.now()
+                return new_id
             if r.status_code not in (200, 204):
                 _last_error = f"Discord {r.status_code}"
             return None
