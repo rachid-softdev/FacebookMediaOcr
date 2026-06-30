@@ -745,5 +745,23 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "group442117953552653",
+    "group_id": "442117953552653",
+    "slug": "442117953552653",
+    "url": "https://www.facebook.com/groups/442117953552653/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "staffdebaretrestaurantlorient",
+    "group_id": "staffdebaretrestaurantlorient",
+    "slug": "staffdebaretrestaurantlorient",
+    "url": "https://www.facebook.com/groups/staffdebaretrestaurantlorient/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
