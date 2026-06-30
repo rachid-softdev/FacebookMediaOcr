@@ -1006,5 +1006,23 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "group1035032955231685",
+    "group_id": "1035032955231685",
+    "slug": "1035032955231685",
+    "url": "https://www.facebook.com/groups/1035032955231685/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group418370794988600",
+    "group_id": "418370794988600",
+    "slug": "418370794988600",
+    "url": "https://www.facebook.com/groups/418370794988600/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
