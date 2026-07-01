@@ -1489,7 +1489,7 @@ class FacebookScraper:
                     "raw_text": raw,
                 })
         file_exists = os.path.exists(EMAILS_CSV) and os.path.getsize(EMAILS_CSV) > 0
-        mode = "a" if (append and file_exists) else "w"
+        mode = "a" if file_exists else "w"
         needs_header = mode == "w"
         with open(EMAILS_CSV, mode, newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
