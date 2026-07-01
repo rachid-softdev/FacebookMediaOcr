@@ -1042,5 +1042,14 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "jobalertliege",
+    "group_id": "jobalertliege",
+    "slug": "jobalertliege",
+    "url": "https://www.facebook.com/groups/jobalertliege/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
