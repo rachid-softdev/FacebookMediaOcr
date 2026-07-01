@@ -1363,13 +1363,13 @@ class FacebookScraper:
         msg_id = notify("debut", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "live"})
 
         state = load_state()
-        start_from = 0
+        processed_fbids = set()
         ocr_results = []
         if state and state.get("phase") == "live":
-            start_from = state.get("processed", 0)
+            processed_fbids = set(state.get("processed_fbids", []))
             ocr_results = state.get("ocr_results", [])
-            if start_from > 0:
-                print(f"[*] Reprise après {start_from} photos déjà traitées")
+            if processed_fbids:
+                print(f"[*] Reprise : {len(processed_fbids)} photos déjà traitées")
 
         fbids = self._powershell_graphql_fbids(GROUP_ID, max_pages=MAX_PAGES)
         if not fbids:
@@ -1377,34 +1377,31 @@ class FacebookScraper:
             notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error="Aucune photo via GraphQL", message_id=msg_id)
             return
 
-        total = len(fbids)
-        if start_from >= total:
-            print("[*] Toutes les photos sont déjà traitées")
-            self._save_ocr_csv(ocr_results)
-            self._print_ocr_summary(ocr_results)
-            clear_state()
+        total_all = len(fbids)
+        new_fbids = [p for p in fbids if p["fbid"] not in processed_fbids]
+        total_new = len(new_fbids)
+
+        if total_new == 0:
+            print(f"[*] Toutes les {total_all} photos sont déjà traitées")
             email_count = sum(len(r["emails"]) for r in ocr_results)
             notify("ok", group=gname, script="fb_selenium", group_pos=GROUP_POS,
                    data={"deja_traite": True, "emails": email_count}, message_id=msg_id)
             return
 
-        print(f"\n[*] {total} photos trouvées via GraphQL\n")
+        print(f"\n[*] {total_all} photos au total, {total_new} nouvelles\n")
 
         Path(DOWNLOAD_DIR).mkdir(exist_ok=True)
         session = requests.Session()
         session.headers.update({"User-Agent": UA})
 
         last_update = 0
-        csv_saved_count = 0
+        csv_saved_count = len(ocr_results)
 
         try:
-            for idx, photo in enumerate(fbids):
-                if idx < start_from:
-                    continue
-
+            for idx, photo in enumerate(new_fbids):
                 fbid = photo["fbid"]
                 url = photo["url"]
-                label = f"  [{idx+1:>4}/{total}] {fbid}"
+                label = f"  [{idx+1:>4}/{total_new}] {fbid}"
 
                 res = self._process_photo(fbid, url, session)
                 if res:
@@ -1412,47 +1409,59 @@ class FacebookScraper:
                     print(f"{label}  OK  {res['emails']}")
                 else:
                     print(f"{label}  OK  -")
+                processed_fbids.add(fbid)
 
-                if (idx + 1) % BATCH_SIZE == 0 or idx == total - 1:
+                if (idx + 1) % BATCH_SIZE == 0 or idx == total_new - 1:
                     new_results = ocr_results[csv_saved_count:]
                     if new_results:
                         self._save_ocr_csv(new_results, append=csv_saved_count > 0)
                         csv_saved_count = len(ocr_results)
+                    save_state({
+                        "phase": "live",
+                        "processed_fbids": sorted(processed_fbids),
+                        "ocr_results": ocr_results,
+                    })
                     email_count = sum(len(r["emails"]) for r in ocr_results)
-                    print(f"\n  --- Lot : {idx+1}/{total}, {email_count} email(s) ---")
+                    print(f"\n  --- Lot : {idx+1}/{total_new}, {email_count} email(s) ---")
 
-                if (idx + 1) - last_update >= UPDATE_INTERVAL or idx == total - 1:
+                if (idx + 1) - last_update >= UPDATE_INTERVAL or idx == total_new - 1:
                     email_count = sum(len(r["emails"]) for r in ocr_results)
                     all_emails = [e for r in ocr_results for e in r["emails"]]
                     emails_str = ", ".join(all_emails[:20])
                     notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS, message_id=msg_id,
-                           data={"progression": f"{idx+1}/{total}", "emails": email_count,
+                           data={"progression": f"{idx+1}/{total_new}", "emails": email_count,
                                  "liste": emails_str or "—"})
                     last_update = idx + 1
 
                 time.sleep(0.5)
 
-            self._save_ocr_csv(ocr_results)
+            new_results = ocr_results[csv_saved_count:]
+            if new_results:
+                self._save_ocr_csv(new_results, append=csv_saved_count > 0)
             self._print_ocr_summary(ocr_results)
-            clear_state()
+            save_state({
+                "phase": "live",
+                "processed_fbids": sorted(processed_fbids),
+                "ocr_results": ocr_results,
+            })
             email_count = sum(len(r["emails"]) for r in ocr_results)
             all_emails = [e for r in ocr_results for e in r["emails"]]
             emails_str = ", ".join(all_emails[:30])
             notify("ok", group=gname, script="fb_selenium", group_pos=GROUP_POS, message_id=msg_id,
-                   data={"mode": "live", "photos": total, "emails": email_count,
+                   data={"mode": "live", "photos": total_all, "emails": email_count,
                          "liste": emails_str or "—"})
             git_push_results(gname)
             cleanup_downloads(gname)
 
         except KeyboardInterrupt:
             print("\n[!] Interrompu par l'utilisateur")
-            save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
+            save_state({"phase": "live", "processed_fbids": sorted(processed_fbids), "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
             notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS,
-                   data={"interrompu": True, "processed": idx}, message_id=msg_id)
+                   data={"interrompu": True, "processed": len(processed_fbids)}, message_id=msg_id)
         except Exception as e:
             print(f"\n[!] Erreur : {e}")
-            save_state({"phase": "live", "processed": idx, "ocr_results": ocr_results})
+            save_state({"phase": "live", "processed_fbids": sorted(processed_fbids), "ocr_results": ocr_results})
             print(f"    État sauvegardé dans {STATE_FILE} (reprise possible)")
             notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error=str(e), message_id=msg_id)
             raise
@@ -1488,9 +1497,8 @@ class FacebookScraper:
                     "all_emails_in_image": "",
                     "raw_text": raw,
                 })
-        file_exists = os.path.exists(EMAILS_CSV) and os.path.getsize(EMAILS_CSV) > 0
-        mode = "a" if file_exists else "w"
-        needs_header = mode == "w"
+        needs_header = not append
+        mode = "a" if append else "w"
         with open(EMAILS_CSV, mode, newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             if needs_header:
