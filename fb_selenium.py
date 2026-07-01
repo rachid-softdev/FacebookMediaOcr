@@ -1204,9 +1204,12 @@ class FacebookScraper:
                     "raw_text": raw,
                 })
 
-        with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
+        file_exists = os.path.exists(EMAILS_CSV) and os.path.getsize(EMAILS_CSV) > 0
+        mode = "a" if file_exists else "w"
+        with open(EMAILS_CSV, mode, newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
+            if mode == "w":
+                writer.writeheader()
             writer.writerows(rows)
 
         email_count = sum(1 for r in rows if r["email"])
@@ -1392,6 +1395,7 @@ class FacebookScraper:
         session.headers.update({"User-Agent": UA})
 
         last_update = 0
+        csv_saved_count = 0
 
         try:
             for idx, photo in enumerate(fbids):
@@ -1410,7 +1414,10 @@ class FacebookScraper:
                     print(f"{label}  OK  -")
 
                 if (idx + 1) % BATCH_SIZE == 0 or idx == total - 1:
-                    self._save_ocr_csv(ocr_results)
+                    new_results = ocr_results[csv_saved_count:]
+                    if new_results:
+                        self._save_ocr_csv(new_results, append=csv_saved_count > 0)
+                        csv_saved_count = len(ocr_results)
                     email_count = sum(len(r["emails"]) for r in ocr_results)
                     print(f"\n  --- Lot : {idx+1}/{total}, {email_count} email(s) ---")
 
@@ -1450,7 +1457,7 @@ class FacebookScraper:
             notify("echec", group=gname, script="fb_selenium", group_pos=GROUP_POS, error=str(e), message_id=msg_id)
             raise
 
-    def _save_ocr_csv(self, ocr_results):
+    def _save_ocr_csv(self, ocr_results, append=False):
         if not ocr_results:
             return
         fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text"]
@@ -1481,9 +1488,13 @@ class FacebookScraper:
                     "all_emails_in_image": "",
                     "raw_text": raw,
                 })
-        with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
+        file_exists = os.path.exists(EMAILS_CSV) and os.path.getsize(EMAILS_CSV) > 0
+        mode = "a" if (append and file_exists) else "w"
+        needs_header = mode == "w"
+        with open(EMAILS_CSV, mode, newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
+            if needs_header:
+                writer.writeheader()
             writer.writerows(rows)
         print(f"    -> emails.csv mis à jour ({len(rows)} entrées)")
 
