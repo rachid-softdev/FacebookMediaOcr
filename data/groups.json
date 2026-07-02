@@ -1087,5 +1087,23 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "offredemploimontreal",
+    "group_id": "offredemploimontreal",
+    "slug": "offredemploimontreal",
+    "url": "https://www.facebook.com/groups/offredemploimontreal/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group900365816194158",
+    "group_id": "900365816194158",
+    "slug": "900365816194158",
+    "url": "https://www.facebook.com/groups/900365816194158/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
