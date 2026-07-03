@@ -246,6 +246,95 @@ logs-{name}.txt             # Logs individuels (mode service)
 facebook-media-ocr.logrotate # Rotation des logs (logrotate)
 ```
 
+## SMTP Email Verification (`smtp_verify.py`)
+
+Vérifie si une adresse email existe réellement en se connectant au serveur SMTP
+et en simulant un envoi (RCPT TO) sans jamais envoyer d'email (QUIT avant DATA).
+
+**Zéro dépendance externe** — utilise uniquement la librairie standard Python.
+
+### Principe
+
+```
+Vous → HELO/EHLO → STARTTLS → MAIL FROM → RCPT TO → QUIT (coupe avant DATA)
+```
+
+Le serveur SMTP répond `250` si l'adresse existe, `550` si elle n'existe pas.
+
+### Usage
+
+```bash
+# Simple
+python3 smtp_verify.py user@example.com mx.example.com
+
+# Batch CSV (besoin colonnes email + mx_host)
+python3 smtp_verify.py --batch emails.csv
+
+# Depuis stdin
+echo "user@example.com,mx.example.com" | python3 smtp_verify.py --stdin
+
+# Sortie JSON
+python3 smtp_verify.py --batch emails.csv --output json
+```
+
+### Options
+
+| Option | Défaut | Description |
+|--------|--------|-------------|
+| `--batch` | — | Fichier CSV avec colonnes email et mx_host |
+| `--email-col` | `email` | Nom de la colonne email dans le CSV |
+| `--mx-col` | `mx_host` | Nom de la colonne mx_host dans le CSV |
+| `--stdin` | — | Lire les paires depuis stdin (une par ligne: `email,mx_host`) |
+| `--timeout` | `10` | Timeout de connexion SMTP en secondes |
+| `--no-retry` | — | Ne pas réessayer en cas de greylisting (code 4xx) |
+| `--source-addr` | `verify@example.com` | Adresse expéditeur pour MAIL FROM |
+| `--hello` | hostname local | Hostname envoyé dans HELO/EHLO |
+| `--output` | `text` | Format de sortie : `text`, `csv`, ou `json` |
+| `--output-file` | stdout | Fichier de sortie |
+
+### Rapport automatique
+
+En mode batch (CSV ou stdin), un **rapport Markdown** est automatiquement
+généré avec le même nom que le fichier d'entrée suffixé de `-rapport.md` :
+
+```bash
+python3 smtp_verify.py --batch emails.csv
+# Produit : emails-rapport.md
+```
+
+Le rapport contient :
+
+| Section | Contenu |
+|---------|---------|
+| Résumé | Stats : valides, rejetés, incertains |
+| ❌ Rejetés | Toutes les adresses refusées par le serveur |
+| ✅ Valides | Toutes les adresses acceptées |
+| ❓ Incertains | Catch-all, timeout, greylisting... |
+| Tableau complet | Toutes les adresses avec leur statut |
+
+### Retours possibles
+
+| `exists` | Signification |
+|----------|---------------|
+| `True` | Serveur SMTP a accepté (RCPT 250) — l'adresse existe probablement |
+| `False` | Serveur SMTP a refusé (RCPT 550) — l'adresse n'existe pas |
+| `None` | Incertain : catch-all détecté, timeout, greylist, ou erreur réseau |
+
+### Détection catch-all
+
+Les providers connus pour accepter toutes les adresses (Gmail, Outlook, iCloud)
+sont automatiquement détectés par leur serveur MX et retournent `exists=None`
+sans consommer de connexion SMTP (évite faux positifs).
+
+### Format du CSV d'entrée
+
+```csv
+email,mx_host
+contact@example.com,mx1.example.com
+john@company.com,mail.company.com
+jane@gmail.com,gmail-smtp-in.l.google.com
+```
+
 ## Compatibilité
 
 | Élément | Windows | Ubuntu |
