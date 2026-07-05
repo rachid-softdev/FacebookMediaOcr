@@ -1213,5 +1213,14 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "staffdebaretrestaurantamiens",
+    "group_id": "staffdebaretrestaurantamiens",
+    "slug": "staffdebaretrestaurantamiens",
+    "url": "https://www.facebook.com/groups/staffdebaretrestaurantamiens/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
