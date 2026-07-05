@@ -1177,5 +1177,23 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "cherchetrouve08",
+    "group_id": "cherchetrouve08",
+    "slug": "cherchetrouve08",
+    "url": "https://www.facebook.com/groups/cherchetrouve08/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group872077536246851",
+    "group_id": "872077536246851",
+    "slug": "872077536246851",
+    "url": "https://www.facebook.com/groups/872077536246851/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
