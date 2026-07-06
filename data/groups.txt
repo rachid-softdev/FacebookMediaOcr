@@ -153,3 +153,4 @@ offresemploisisere:offresemploisisere
 staffdebaretrestaurantlehavre:staffdebaretrestaurantlehavre
 group835185469996722:835185469996722
 group840103729779255:840103729779255
+animannonces:animannonces
