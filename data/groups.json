@@ -1366,5 +1366,14 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "staffdebaretrestaurantlehavre",
+    "group_id": "staffdebaretrestaurantlehavre",
+    "slug": "staffdebaretrestaurantlehavre",
+    "url": "https://www.facebook.com/groups/staffdebaretrestaurantlehavre/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
