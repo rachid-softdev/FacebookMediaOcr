@@ -148,3 +148,5 @@ group116736088376942:116736088376942
 group761159444662855:761159444662855
 marseillejob:marseillejob
 group356034047104:356034047104
+partoutanim:partoutanim
+offresemploisisere:offresemploisisere

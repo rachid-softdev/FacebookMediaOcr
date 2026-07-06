@@ -1348,5 +1348,23 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "partoutanim",
+    "group_id": "partoutanim",
+    "slug": "partoutanim",
+    "url": "https://www.facebook.com/groups/partoutanim/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "offresemploisisere",
+    "group_id": "offresemploisisere",
+    "slug": "offresemploisisere",
+    "url": "https://www.facebook.com/groups/offresemploisisere/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
