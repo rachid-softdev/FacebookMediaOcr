@@ -25,6 +25,10 @@ while IFS=: read -r name gid; do
 done < "$GROUP_ENTRIES_FILE"
 echo "[$(date)] ${#GROUP_ENTRIES[@]} groupes chargés depuis $GROUP_ENTRIES_FILE"
 
+# --- Shuffle pour éviter un pattern de détection ---
+readarray -t GROUP_ENTRIES < <(printf "%s\n" "${GROUP_ENTRIES[@]}" | shuf)
+echo "[$(date)] Ordre mélangé aléatoirement"
+
 # --- Nettoyage des logs ---
 mkdir -p results
 for entry in "${GROUP_ENTRIES[@]}"; do
@@ -85,7 +89,7 @@ for entry in "${GROUP_ENTRIES[@]}"; do
 
   printf "  [%3d/%d] %s -> %s\n" "$idx" "$total" "$name" "$gid"
   launch_job "$name" "$gid" "$mode" "--group-pos" "$idx/$total"
-  sleep 2  # laisser le temps au screen de s'enregistrer
+  sleep $(( (RANDOM % 41) + 5 ))  # pause aléatoire 5-45s entre chaque groupe
 done
 
 echo "[$(date)] Terminé"
