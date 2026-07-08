@@ -1699,5 +1699,23 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "group189945856378007",
+    "group_id": "189945856378007",
+    "slug": "189945856378007",
+    "url": "https://www.facebook.com/groups/189945856378007/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "saisonniers.sainttropez",
+    "group_id": "saisonniers.sainttropez",
+    "slug": "saisonniers.sainttropez",
+    "url": "https://www.facebook.com/groups/facebook.comgroupssaisonniers.sainttropez/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
