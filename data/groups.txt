@@ -185,3 +185,5 @@ emploi.saisonnier.hotellerie.restauration:emploi.saisonnier.hotellerie.restaurat
 group1036742081614389:1036742081614389
 staffdebaretrestauranttoulon:staffdebaretrestauranttoulon
 group1404960887934759:1404960887934759
+group1412065239743950:1412065239743950
+group1502402580383686:1502402580383686
