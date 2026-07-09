@@ -2248,5 +2248,41 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "group987670949174637",
+    "group_id": "987670949174637",
+    "slug": "987670949174637",
+    "url": "https://www.facebook.com/groups/987670949174637/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group1059809837416178",
+    "group_id": "1059809837416178",
+    "slug": "1059809837416178",
+    "url": "https://www.facebook.com/groups/1059809837416178/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "offres.emploi.saisonniers.oleron",
+    "group_id": "offres.emploi.saisonniers.oleron",
+    "slug": "offres.emploi.saisonniers.oleron",
+    "url": "https://www.facebook.com/groups/offres.emploi.saisonniers.oleron/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
+  },
+  {
+    "name": "group276700626189206",
+    "group_id": "276700626189206",
+    "slug": "276700626189206",
+    "url": "https://www.facebook.com/groups/276700626189206/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
