@@ -88,8 +88,8 @@ def powershell(script, timeout=30):
 
 
 def fetch_lsd(group_id):
-    """Récupère le token LSD + l'ID numérique du groupe + member_count via PowerShell.
-    Retourne (lsd, numeric_group_id, member_count) ou (None, None, None) en cas d'échec."""
+    """Récupère le token LSD + l'ID numérique + member_count + group_privacy via PowerShell.
+    Retourne (lsd, numeric_group_id, member_count, group_privacy) ou (None, None, None, None) en cas d'échec."""
     ps_script = f'''
 $ua = "{UA}"
 $tmpHtml = [System.IO.Path]::GetTempFileName() + ".html"
@@ -107,13 +107,13 @@ try {{
     out, err, code = powershell(ps_script, timeout=35)
     if "__POWERSHELL_ERROR__" in out[:100]:
         print(f"  [!] PowerShell error: {out[out.find('__POWERSHELL_ERROR__')+20:].strip()[:200]}")
-        return None, None, None
+        return None, None, None, None
     if code != 0 or not out.strip():
         print(f"  [!] PowerShell failed (code {code})")
         if err:
             for line in err.strip().splitlines()[:5]:
                 print(f"      {line}")
-        return None, None, None
+        return None, None, None, None
     lsd = None
     for pat in [
         r'"LSD",\[\],\{"token":"([^"]+)"',
@@ -126,7 +126,7 @@ try {{
             break
     if not lsd:
         print("  [!] LSD token not found in page")
-        return None, None, None
+        return None, None, None, None
 
     # Extraire le nombre de membres
     member_count = None
@@ -135,6 +135,15 @@ try {{
         if mm:
             member_count = int(mm.group(1))
             print(f"  Membres: {member_count}")
+            break
+
+    # Extraire le type de confidentialité
+    group_privacy = None
+    for pp in [r'"privacy":"(\w+)"', r'"groupPrivacy":"(\w+)"']:
+        pm = re.search(pp, out)
+        if pm:
+            group_privacy = pm.group(1)
+            print(f"  Privacité: {group_privacy}")
             break
 
     # Résoudre l'ID numérique si le group_id est un slug texte
@@ -151,8 +160,8 @@ try {{
             break
     if numeric_id and numeric_id != group_id:
         print(f"  Group ID résolu : {group_id} -> {numeric_id}")
-        return lsd, numeric_id, member_count
-    return lsd, group_id, member_count
+        return lsd, numeric_id, member_count, group_privacy
+    return lsd, group_id, member_count, group_privacy
 
 
 # --- GraphQL ---------------------------------------------------------------
@@ -251,28 +260,37 @@ def ocr_image(img_path):
 
 
 def extract_emails(text):
+    """Retourne une liste de {"email": str, "stage": int}."""
     seen = set()
     result = []
     for e in EMAIL_RE.findall(text):
         el = e.lower()
         if el not in seen:
             seen.add(el)
-            result.append(el)
+            result.append({"email": el, "stage": 1})
     return result
 
 
-def ocr_photo(img_path, url=None, owner_id="", group_id=""):
+def ocr_photo(img_path, url=None, owner_id="", group_id="", dept_num=""):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
         if not emails:
             return None
+
+        import cv2 as _cv2
+        img = _cv2.imread(str(img_path))
+        h, w = img.shape[:2] if img is not None else (0, 0)
+
         return {
             "file": img_path.name,
             "fbid": img_path.stem,
             "image_url": url or "",
             "owner_id": owner_id,
             "group_id": group_id,
+            "dept_num": dept_num,
+            "image_width": w,
+            "image_height": h,
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
             "collected_at": datetime.now().isoformat(),
@@ -327,7 +345,7 @@ def process_page(entries, page_num, session, group_id=""):
             res = ocr_photo(out_path, url=url, owner_id=owner_id, group_id=group_id)
             if res:
                 found.append(res)
-                print(f"{label}  OK  {res['emails']}")
+                print(f"{label}  OK  {[e['email'] for e in res['emails']]}")
             else:
                 print(f"{label}  OK  - (aucun email)")
         except Exception as e:
@@ -352,7 +370,7 @@ if __name__ == "__main__":
     Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 
     print("[*] Connexion…")
-    lsd, resolved_id, _ = fetch_lsd(args.group_id)
+    lsd, resolved_id, _, _ = fetch_lsd(args.group_id)
     if not lsd:
         notify("echec", group=args.group_id, script="fb_graphql", error="LSD introuvable")
         sys.exit(1)
@@ -397,7 +415,7 @@ if __name__ == "__main__":
 
     # Emails
     if all_ocr:
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "owner_id", "group_id", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "owner_id", "group_id", "dept_num", "image_width", "image_height", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in all_ocr:
@@ -406,16 +424,24 @@ if __name__ == "__main__":
             collected_at = r.get("collected_at", now_iso)
             owner_id = r.get("owner_id", "")
             group_id = r.get("group_id", "")
-            for email in r["emails"]:
+            dept_num = r.get("dept_num", "")
+            iw = r.get("image_width", "")
+            ih = r.get("image_height", "")
+            flat_emails = [e["email"] for e in r["emails"]]
+            for entry in r["emails"]:
                 rows.append({
                     "file": r["file"],
                     "fbid": fbid,
                     "image_url": r.get("image_url", ""),
                     "fb_url": fb_url,
-                    "email": email,
-                    "all_emails_in_image": ", ".join(r["emails"]),
+                    "email": entry["email"],
+                    "email_stage": entry["stage"],
+                    "all_emails_in_image": ", ".join(flat_emails),
                     "owner_id": owner_id,
                     "group_id": group_id,
+                    "dept_num": dept_num,
+                    "image_width": iw,
+                    "image_height": ih,
                     "collected_at": collected_at,
                 })
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
@@ -427,7 +453,7 @@ if __name__ == "__main__":
         print(f"{'='*50}")
         for r in all_ocr:
             for e in r["emails"]:
-                print(f"  {e}")
+                print(f"  {e['email']}")
         email_data = {"emails": len(rows), "photos": len(all_entries), "pages": page}
         notify("ok", group=args.group_id, script="fb_graphql", data=email_data)
         print(f"\n[OK] {len(rows)} email(s) -> {EMAILS_CSV}")
