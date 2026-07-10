@@ -221,10 +221,15 @@ def graphql_page(lsd, group_id, cursor):
     entries = []
     for edge in media.get("edges", []):
         node = edge.get("node", {})
+        vi = node.get("viewer_image", {})
         entry = {
             "fbid": node.get("id", ""),
             "url": node.get("image", {}).get("uri", ""),
             "owner": node.get("owner", {}).get("id", ""),
+            "image_width": vi.get("width"),
+            "image_height": vi.get("height"),
+            "accessibility_caption": node.get("accessibility_caption", ""),
+            "is_playable": node.get("is_playable", False),
         }
         if entry["url"]:
             entries.append(entry)
@@ -271,16 +276,13 @@ def extract_emails(text):
     return result
 
 
-def ocr_photo(img_path, url=None, owner_id="", group_id="", dept_num=""):
+def ocr_photo(img_path, url=None, owner_id="", group_id="", dept_num="",
+              image_width=None, image_height=None, accessibility_caption="", is_playable=False):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
         if not emails:
             return None
-
-        import cv2 as _cv2
-        img = _cv2.imread(str(img_path))
-        h, w = img.shape[:2] if img is not None else (0, 0)
 
         return {
             "file": img_path.name,
@@ -289,8 +291,9 @@ def ocr_photo(img_path, url=None, owner_id="", group_id="", dept_num=""):
             "owner_id": owner_id,
             "group_id": group_id,
             "dept_num": dept_num,
-            "image_width": w,
-            "image_height": h,
+            "image_width": image_width,
+            "image_height": image_height,
+            "accessibility_caption": accessibility_caption,
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
             "collected_at": datetime.now().isoformat(),
@@ -342,7 +345,11 @@ def process_page(entries, page_num, session, group_id=""):
             with open(out_path, "wb") as f:
                 f.write(data)
 
-            res = ocr_photo(out_path, url=url, owner_id=owner_id, group_id=group_id)
+            res = ocr_photo(out_path, url=url, owner_id=owner_id, group_id=group_id,
+                            image_width=item.get("image_width"),
+                            image_height=item.get("image_height"),
+                            accessibility_caption=item.get("accessibility_caption", ""),
+                            is_playable=item.get("is_playable", False))
             if res:
                 found.append(res)
                 print(f"{label}  OK  {[e['email'] for e in res['emails']]}")
@@ -415,7 +422,7 @@ if __name__ == "__main__":
 
     # Emails
     if all_ocr:
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "owner_id", "group_id", "dept_num", "image_width", "image_height", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "owner_id", "group_id", "dept_num", "image_width", "image_height", "accessibility_caption", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in all_ocr:
@@ -427,6 +434,7 @@ if __name__ == "__main__":
             dept_num = r.get("dept_num", "")
             iw = r.get("image_width", "")
             ih = r.get("image_height", "")
+            acc_cap = r.get("accessibility_caption", "")
             flat_emails = [e["email"] for e in r["emails"]]
             for entry in r["emails"]:
                 rows.append({
@@ -442,6 +450,7 @@ if __name__ == "__main__":
                     "dept_num": dept_num,
                     "image_width": iw,
                     "image_height": ih,
+                    "accessibility_caption": acc_cap,
                     "collected_at": collected_at,
                 })
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:

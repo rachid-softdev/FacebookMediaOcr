@@ -340,15 +340,13 @@ def cleanup_downloads(gname):
         print(f"    [cleanup] {dl_dir}/ supprime")
 
 
-def process_image_ocr(img_path, url=None, owner_id="", group_id="", dept_num=""):
+def process_image_ocr(img_path, url=None, owner_id="", group_id="", dept_num="",
+                      image_width=None, image_height=None, accessibility_caption=""):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
         raw = text.strip().replace("\n", " | ")[:300]
         print(f"    [DEBUG OCR] {raw}")
-
-        img = cv2.imread(str(img_path))
-        h, w = img.shape[:2] if img is not None else (0, 0)
 
         return {
             "file": img_path.name,
@@ -357,8 +355,9 @@ def process_image_ocr(img_path, url=None, owner_id="", group_id="", dept_num="")
             "owner_id": owner_id,
             "group_id": group_id,
             "dept_num": dept_num,
-            "image_width": w,
-            "image_height": h,
+            "image_width": image_width,
+            "image_height": image_height,
+            "accessibility_caption": accessibility_caption,
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
             "collected_at": datetime.now().isoformat(),
@@ -1033,6 +1032,7 @@ class FacebookScraper:
                         "dept_num": _extract_dept(GROUP_NAME),
                         "image_width": w,
                         "image_height": h,
+                        "accessibility_caption": "",
                         "emails": emails,
                         "raw_text": text.strip().replace("\n", " ")[:500],
                         "collected_at": datetime.now().isoformat(),
@@ -1101,6 +1101,7 @@ class FacebookScraper:
                         "dept_num": _extract_dept(GROUP_NAME),
                         "image_width": "",
                         "image_height": "",
+                        "accessibility_caption": "",
                         "emails": emails,
                         "raw_text": text.strip().replace("\n", " ")[:500],
                         "collected_at": datetime.now().isoformat(),
@@ -1204,7 +1205,7 @@ class FacebookScraper:
             print("\n[!] Aucun email trouvé.")
             notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "ocr-only", "emails": 0, "images": len(images)})
 
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "raw_text", "owner_id", "group_id", "dept_num", "image_width", "image_height", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "raw_text", "owner_id", "group_id", "dept_num", "image_width", "image_height", "accessibility_caption", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in ocr_results:
@@ -1216,6 +1217,7 @@ class FacebookScraper:
             dept_num = r.get("dept_num", "")
             iw = r.get("image_width", "")
             ih = r.get("image_height", "")
+            acc_cap = r.get("accessibility_caption", "")
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             flat_emails = [e["email"] for e in emails_list]
@@ -1235,6 +1237,7 @@ class FacebookScraper:
                         "dept_num": dept_num,
                         "image_width": iw,
                         "image_height": ih,
+                        "accessibility_caption": acc_cap,
                         "collected_at": collected_at,
                     })
             else:
@@ -1252,6 +1255,7 @@ class FacebookScraper:
                     "dept_num": dept_num,
                     "image_width": iw,
                     "image_height": ih,
+                    "accessibility_caption": acc_cap,
                     "collected_at": collected_at,
                 })
 
@@ -1292,14 +1296,21 @@ class FacebookScraper:
                 break
             for e in entries:
                 if e.get("url"):
-                    photos.append({"fbid": e["fbid"], "url": e["url"], "owner": e.get("owner", "")})
+                    photos.append({
+                        "fbid": e["fbid"],
+                        "url": e["url"],
+                        "owner": e.get("owner", ""),
+                        "image_width": e.get("image_width"),
+                        "image_height": e.get("image_height"),
+                        "accessibility_caption": e.get("accessibility_caption", ""),
+                    })
             print(f" +{len(entries)}")
             if not cursor:
                 break
             _time.sleep(1.0)
         return photos
 
-    def _process_photo(self, fbid, url, session, owner_id=""):
+    def _process_photo(self, fbid, url, session, owner_id="", image_width=None, image_height=None, accessibility_caption=""):
         """Télécharge une photo depuis l'URL GraphQL et lance l'OCR directement."""
         label = f"  {fbid}"
         try:
@@ -1323,7 +1334,10 @@ class FacebookScraper:
             with open(out_path, "wb") as f:
                 f.write(data)
 
-            return process_image_ocr(out_path, url=url, owner_id=owner_id, group_id=GROUP_ID, dept_num=_extract_dept(GROUP_NAME))
+            return process_image_ocr(out_path, url=url, owner_id=owner_id, group_id=GROUP_ID,
+                                     dept_num=_extract_dept(GROUP_NAME),
+                                     image_width=image_width, image_height=image_height,
+                                     accessibility_caption=accessibility_caption)
         except Exception as e:
             print(f"{label}  ERR {e}")
             return None
@@ -1454,7 +1468,11 @@ class FacebookScraper:
                 url = photo["url"]
                 label = f"  [{idx+1:>4}/{total_new}] {fbid}"
 
-                res = self._process_photo(fbid, url, session, owner_id=photo.get("owner", ""))
+                res = self._process_photo(fbid, url, session,
+                    owner_id=photo.get("owner", ""),
+                    image_width=photo.get("image_width"),
+                    image_height=photo.get("image_height"),
+                    accessibility_caption=photo.get("accessibility_caption", ""))
                 if res:
                     ocr_results.append(res)
                     print(f"{label}  OK  {[e['email'] for e in res['emails']]}")
@@ -1520,7 +1538,7 @@ class FacebookScraper:
     def _save_ocr_csv(self, ocr_results, append=False):
         if not ocr_results:
             return
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "raw_text", "owner_id", "group_id", "dept_num", "image_width", "image_height", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "email_stage", "all_emails_in_image", "raw_text", "owner_id", "group_id", "dept_num", "image_width", "image_height", "accessibility_caption", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in ocr_results:
@@ -1532,6 +1550,7 @@ class FacebookScraper:
             dept_num = r.get("dept_num", "")
             iw = r.get("image_width", "")
             ih = r.get("image_height", "")
+            acc_cap = r.get("accessibility_caption", "")
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             flat_emails = [e["email"] for e in emails_list]
@@ -1551,6 +1570,7 @@ class FacebookScraper:
                         "dept_num": dept_num,
                         "image_width": iw,
                         "image_height": ih,
+                        "accessibility_caption": acc_cap,
                         "collected_at": collected_at,
                     })
             else:
@@ -1568,6 +1588,7 @@ class FacebookScraper:
                     "dept_num": dept_num,
                     "image_width": iw,
                     "image_height": ih,
+                    "accessibility_caption": acc_cap,
                     "collected_at": collected_at,
                 })
         needs_header = not append
