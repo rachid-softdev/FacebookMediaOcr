@@ -252,3 +252,7 @@ group987670949174637:987670949174637
 group1059809837416178:1059809837416178
 offres.emploi.saisonniers.oleron:offres.emploi.saisonniers.oleron
 group276700626189206:276700626189206
+offresdemploiauluxembourg:offresdemploiauluxembourg
+offresdemploiauluxembourg1:offresdemploiauluxembourg1
+group993113896289070:993113896289070
+jobsrecrutementluxembourg:jobsrecrutementluxembourg
