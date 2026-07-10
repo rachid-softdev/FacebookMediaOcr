@@ -51,21 +51,11 @@ try:
     import pytesseract
     from PIL import Image
     # Chercher Tesseract
-    try:
-        pytesseract.get_tesseract_version()
-    except Exception:
-        tesseract_paths = []
-        if sys.platform == "win32":
-            tesseract_paths = [
-                r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-                r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-            ]
-        else:
-            tesseract_paths = ["/usr/bin/tesseract", "/usr/local/bin/tesseract"]
-        for path in tesseract_paths:
-            if os.path.exists(path):
-                pytesseract.pytesseract.tesseract_cmd = path
-                break
+    for p in (["/usr/bin/tesseract", "/usr/local/bin/tesseract"] if sys.platform != "win32"
+              else [r"C:\Program Files\Tesseract-OCR\tesseract.exe", r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"]):
+        if os.path.exists(p):
+            pytesseract.pytesseract.tesseract_cmd = p
+            break
 except ImportError:
     print("[ERR] pytesseract, opencv-python, Pillow requis pour l'OCR.")
     print("      pip install pytesseract opencv-python Pillow numpy")

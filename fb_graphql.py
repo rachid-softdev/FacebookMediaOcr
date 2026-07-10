@@ -25,28 +25,18 @@ try:
     import numpy as np
     import pytesseract
     from PIL import Image
-    try:
-        pytesseract.get_tesseract_version()
-    except pytesseract.TesseractNotFoundError:
-        tesseract_paths = []
-        if sys.platform == "win32":
-            tesseract_paths = [
-                r"C:\Program Files\Tesseract-OCR\tesseract.exe",
-                r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",
-            ]
+    for p in (["/usr/bin/tesseract", "/usr/local/bin/tesseract"] if sys.platform != "win32"
+              else [r"C:\Program Files\Tesseract-OCR\tesseract.exe", r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe"]):
+        if os.path.exists(p):
+            pytesseract.pytesseract.tesseract_cmd = p
+            break
+    else:
+        print("[!] Tesseract introuvable. Installe-le ou mets à jour le chemin.")
+        if sys.platform != "win32":
+            print("    sudo apt install tesseract-ocr tesseract-ocr-fra")
         else:
-            tesseract_paths = ["/usr/bin/tesseract", "/usr/local/bin/tesseract"]
-        for p in tesseract_paths:
-            if os.path.exists(p):
-                pytesseract.pytesseract.tesseract_cmd = p
-                break
-        else:
-            print("[!] Tesseract introuvable. Installe-le ou mets à jour le chemin.")
-            if sys.platform != "win32":
-                print("    sudo apt install tesseract-ocr tesseract-ocr-fra")
-            else:
-                print("    https://github.com/UB-Mannheim/tesseract/wiki")
-            sys.exit(1)
+            print("    https://github.com/UB-Mannheim/tesseract/wiki")
+        sys.exit(1)
 except ImportError:
     print("[!] Dépendances manquantes.")
     print("    pip install opencv-python numpy pytesseract Pillow requests")
