@@ -345,6 +345,7 @@ def process_image_ocr(img_path, url=None):
             "image_url": url or "",
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
+            "collected_at": datetime.now().isoformat(),
         }
     except Exception as e:
         print(f"  [WARN] OCR {img_path.name} : {e}")
@@ -1013,6 +1014,7 @@ class FacebookScraper:
                         "fbid": fbid,
                         "emails": emails,
                         "raw_text": text.strip().replace("\n", " ")[:500],
+                        "collected_at": datetime.now().isoformat(),
                     }, out
                 # Pas d'email → supprimer l'image
                 out.unlink(missing_ok=True)
@@ -1075,6 +1077,7 @@ class FacebookScraper:
                         "fbid": fbid,
                         "emails": emails,
                         "raw_text": text.strip().replace("\n", " ")[:500],
+                        "collected_at": datetime.now().isoformat(),
                     }, out
                 out.unlink(missing_ok=True)
                 return None, None
@@ -1175,11 +1178,13 @@ class FacebookScraper:
             print("\n[!] Aucun email trouvé.")
             notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "ocr-only", "emails": 0, "images": len(images)})
 
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text", "collected_at"]
+        now_iso = datetime.now().isoformat()
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
             emails_list = r.get("emails", [])
+            collected_at = r.get("collected_at", now_iso)
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             if emails_list:
@@ -1192,6 +1197,7 @@ class FacebookScraper:
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
+                        "collected_at": collected_at,
                     })
             else:
                 rows.append({
@@ -1202,6 +1208,7 @@ class FacebookScraper:
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
+                    "collected_at": collected_at,
                 })
 
         file_exists = os.path.exists(EMAILS_CSV) and os.path.getsize(EMAILS_CSV) > 0
@@ -1469,11 +1476,13 @@ class FacebookScraper:
     def _save_ocr_csv(self, ocr_results, append=False):
         if not ocr_results:
             return
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text", "collected_at"]
+        now_iso = datetime.now().isoformat()
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
             emails_list = r.get("emails", [])
+            collected_at = r.get("collected_at", now_iso)
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             if emails_list:
@@ -1486,6 +1495,7 @@ class FacebookScraper:
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
+                        "collected_at": collected_at,
                     })
             else:
                 rows.append({
@@ -1496,6 +1506,7 @@ class FacebookScraper:
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
+                    "collected_at": collected_at,
                 })
         needs_header = not append
         mode = "a" if append else "w"

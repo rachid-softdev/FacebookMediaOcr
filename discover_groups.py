@@ -21,6 +21,7 @@ import time
 import re
 import json
 import argparse
+from datetime import datetime
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -157,6 +158,7 @@ def try_slug(dept_num, dept_name, slug):
             "dept_num": dept_num,
             "dept_name": dept_name,
             "source": "pattern",
+            "collected_at": datetime.now().isoformat(),
         }
     return None
 
@@ -353,6 +355,7 @@ def main():
                     "dept_num": dept_num,
                     "dept_name": dept_name,
                     "source": "search",
+                    "collected_at": datetime.now().isoformat(),
                 }
                 break
 

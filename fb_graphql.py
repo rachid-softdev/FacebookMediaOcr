@@ -264,6 +264,7 @@ def ocr_photo(img_path, url=None):
             "image_url": url or "",
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
+            "collected_at": datetime.now().isoformat(),
         }
     except Exception as e:
         print(f"    [WARN] OCR {img_path.name} : {e}")
@@ -384,11 +385,13 @@ if __name__ == "__main__":
 
     # Emails
     if all_ocr:
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "collected_at"]
+        now_iso = datetime.now().isoformat()
         rows = []
         for r in all_ocr:
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
+            collected_at = r.get("collected_at", now_iso)
             for email in r["emails"]:
                 rows.append({
                     "file": r["file"],
@@ -397,6 +400,7 @@ if __name__ == "__main__":
                     "fb_url": fb_url,
                     "email": email,
                     "all_emails_in_image": ", ".join(r["emails"]),
+                    "collected_at": collected_at,
                 })
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:
             writer = csv.DictWriter(f, fieldnames=fieldnames)
