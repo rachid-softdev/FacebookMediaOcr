@@ -88,8 +88,8 @@ def powershell(script, timeout=30):
 
 
 def fetch_lsd(group_id):
-    """Récupère le token LSD + l'ID numérique du groupe via PowerShell Invoke-WebRequest.
-    Retourne (lsd, numeric_group_id) ou (None, None) en cas d'échec."""
+    """Récupère le token LSD + l'ID numérique du groupe + member_count via PowerShell.
+    Retourne (lsd, numeric_group_id, member_count) ou (None, None, None) en cas d'échec."""
     ps_script = f'''
 $ua = "{UA}"
 $tmpHtml = [System.IO.Path]::GetTempFileName() + ".html"
@@ -107,13 +107,13 @@ try {{
     out, err, code = powershell(ps_script, timeout=35)
     if "__POWERSHELL_ERROR__" in out[:100]:
         print(f"  [!] PowerShell error: {out[out.find('__POWERSHELL_ERROR__')+20:].strip()[:200]}")
-        return None, None
+        return None, None, None
     if code != 0 or not out.strip():
         print(f"  [!] PowerShell failed (code {code})")
         if err:
             for line in err.strip().splitlines()[:5]:
                 print(f"      {line}")
-        return None, None
+        return None, None, None
     lsd = None
     for pat in [
         r'"LSD",\[\],\{"token":"([^"]+)"',
@@ -126,7 +126,16 @@ try {{
             break
     if not lsd:
         print("  [!] LSD token not found in page")
-        return None, None
+        return None, None, None
+
+    # Extraire le nombre de membres
+    member_count = None
+    for mp in [r'"member_count":(\d+)', r'"memberCount":(\d+)', r'"members_count":(\d+)']:
+        mm = re.search(mp, out)
+        if mm:
+            member_count = int(mm.group(1))
+            print(f"  Membres: {member_count}")
+            break
 
     # Résoudre l'ID numérique si le group_id est un slug texte
     numeric_id = None
@@ -142,8 +151,8 @@ try {{
             break
     if numeric_id and numeric_id != group_id:
         print(f"  Group ID résolu : {group_id} -> {numeric_id}")
-        return lsd, numeric_id
-    return lsd, group_id
+        return lsd, numeric_id, member_count
+    return lsd, group_id, member_count
 
 
 # --- GraphQL ---------------------------------------------------------------
@@ -252,7 +261,7 @@ def extract_emails(text):
     return result
 
 
-def ocr_photo(img_path, url=None):
+def ocr_photo(img_path, url=None, owner_id="", group_id=""):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
@@ -262,6 +271,8 @@ def ocr_photo(img_path, url=None):
             "file": img_path.name,
             "fbid": img_path.stem,
             "image_url": url or "",
+            "owner_id": owner_id,
+            "group_id": group_id,
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
             "collected_at": datetime.now().isoformat(),
@@ -274,7 +285,7 @@ def ocr_photo(img_path, url=None):
 # --- Download + OCR par page -----------------------------------------------
 
 
-def process_page(entries, page_num, session):
+def process_page(entries, page_num, session, group_id=""):
     """Télécharge un lot d'images, lance l'OCR, affiche les emails."""
     Path(DOWNLOAD_DIR).mkdir(exist_ok=True)
     found = []
@@ -282,6 +293,7 @@ def process_page(entries, page_num, session):
     for i, item in enumerate(entries):
         fbid = item["fbid"]
         url = item.get("url")
+        owner_id = item.get("owner", "")
         label = f"  [{page_num}.{i+1}] {fbid}"
 
         if not url:
@@ -312,7 +324,7 @@ def process_page(entries, page_num, session):
             with open(out_path, "wb") as f:
                 f.write(data)
 
-            res = ocr_photo(out_path, url=url)
+            res = ocr_photo(out_path, url=url, owner_id=owner_id, group_id=group_id)
             if res:
                 found.append(res)
                 print(f"{label}  OK  {res['emails']}")
@@ -340,7 +352,7 @@ if __name__ == "__main__":
     Path(RESULTS_DIR).mkdir(parents=True, exist_ok=True)
 
     print("[*] Connexion…")
-    lsd, resolved_id = fetch_lsd(args.group_id)
+    lsd, resolved_id, _ = fetch_lsd(args.group_id)
     if not lsd:
         notify("echec", group=args.group_id, script="fb_graphql", error="LSD introuvable")
         sys.exit(1)
@@ -365,7 +377,7 @@ if __name__ == "__main__":
 
         all_entries.extend(entries)
 
-        ocr_results = process_page(entries, page, session)
+        ocr_results = process_page(entries, page, session, group_id=args.group_id)
         all_ocr.extend(ocr_results)
 
         email_count = len([r for r in all_ocr for _ in r["emails"]])
@@ -385,13 +397,15 @@ if __name__ == "__main__":
 
     # Emails
     if all_ocr:
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "owner_id", "group_id", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in all_ocr:
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             collected_at = r.get("collected_at", now_iso)
+            owner_id = r.get("owner_id", "")
+            group_id = r.get("group_id", "")
             for email in r["emails"]:
                 rows.append({
                     "file": r["file"],
@@ -400,6 +414,8 @@ if __name__ == "__main__":
                     "fb_url": fb_url,
                     "email": email,
                     "all_emails_in_image": ", ".join(r["emails"]),
+                    "owner_id": owner_id,
+                    "group_id": group_id,
                     "collected_at": collected_at,
                 })
         with open(EMAILS_CSV, "w", newline="", encoding="utf-8") as f:

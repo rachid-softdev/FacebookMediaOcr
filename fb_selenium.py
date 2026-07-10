@@ -333,7 +333,7 @@ def cleanup_downloads(gname):
         print(f"    [cleanup] {dl_dir}/ supprime")
 
 
-def process_image_ocr(img_path, url=None):
+def process_image_ocr(img_path, url=None, owner_id="", group_id=""):
     try:
         text = ocr_image(img_path)
         emails = extract_emails(text)
@@ -343,6 +343,8 @@ def process_image_ocr(img_path, url=None):
             "file": img_path.name,
             "fbid": img_path.stem,
             "image_url": url or "",
+            "owner_id": owner_id,
+            "group_id": group_id,
             "emails": emails,
             "raw_text": text.strip().replace("\n", " ")[:500],
             "collected_at": datetime.now().isoformat(),
@@ -1012,6 +1014,8 @@ class FacebookScraper:
                     return {
                         "file": out.name,
                         "fbid": fbid,
+                        "owner_id": "",
+                        "group_id": GROUP_ID,
                         "emails": emails,
                         "raw_text": text.strip().replace("\n", " ")[:500],
                         "collected_at": datetime.now().isoformat(),
@@ -1075,6 +1079,8 @@ class FacebookScraper:
                     return {
                         "file": out.name,
                         "fbid": fbid,
+                        "owner_id": "",
+                        "group_id": GROUP_ID,
                         "emails": emails,
                         "raw_text": text.strip().replace("\n", " ")[:500],
                         "collected_at": datetime.now().isoformat(),
@@ -1178,13 +1184,15 @@ class FacebookScraper:
             print("\n[!] Aucun email trouvé.")
             notify("info", group=gname, script="fb_selenium", group_pos=GROUP_POS, data={"mode": "ocr-only", "emails": 0, "images": len(images)})
 
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text", "owner_id", "group_id", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
             emails_list = r.get("emails", [])
             collected_at = r.get("collected_at", now_iso)
+            owner_id = r.get("owner_id", "")
+            group_id = r.get("group_id", GROUP_ID)
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             if emails_list:
@@ -1197,6 +1205,8 @@ class FacebookScraper:
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
+                        "owner_id": owner_id,
+                        "group_id": group_id,
                         "collected_at": collected_at,
                     })
             else:
@@ -1208,6 +1218,8 @@ class FacebookScraper:
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
+                    "owner_id": owner_id,
+                    "group_id": group_id,
                     "collected_at": collected_at,
                 })
 
@@ -1235,7 +1247,7 @@ class FacebookScraper:
         Retourne une liste de dicts {"fbid": ..., "url": ...} ou None."""
         import time as _time
         from fb_graphql import fetch_lsd, graphql_page
-        lsd, resolved_id = fetch_lsd(group_id)
+        lsd, resolved_id, _ = fetch_lsd(group_id)
         if not lsd:
             return None
         photos = []
@@ -1248,14 +1260,14 @@ class FacebookScraper:
                 break
             for e in entries:
                 if e.get("url"):
-                    photos.append({"fbid": e["fbid"], "url": e["url"]})
+                    photos.append({"fbid": e["fbid"], "url": e["url"], "owner": e.get("owner", "")})
             print(f" +{len(entries)}")
             if not cursor:
                 break
             _time.sleep(1.0)
         return photos
 
-    def _process_photo(self, fbid, url, session):
+    def _process_photo(self, fbid, url, session, owner_id=""):
         """Télécharge une photo depuis l'URL GraphQL et lance l'OCR directement."""
         label = f"  {fbid}"
         try:
@@ -1279,7 +1291,7 @@ class FacebookScraper:
             with open(out_path, "wb") as f:
                 f.write(data)
 
-            return process_image_ocr(out_path, url=url)
+            return process_image_ocr(out_path, url=url, owner_id=owner_id, group_id=GROUP_ID)
         except Exception as e:
             print(f"{label}  ERR {e}")
             return None
@@ -1410,7 +1422,7 @@ class FacebookScraper:
                 url = photo["url"]
                 label = f"  [{idx+1:>4}/{total_new}] {fbid}"
 
-                res = self._process_photo(fbid, url, session)
+                res = self._process_photo(fbid, url, session, owner_id=photo.get("owner", ""))
                 if res:
                     ocr_results.append(res)
                     print(f"{label}  OK  {res['emails']}")
@@ -1476,13 +1488,15 @@ class FacebookScraper:
     def _save_ocr_csv(self, ocr_results, append=False):
         if not ocr_results:
             return
-        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text", "collected_at"]
+        fieldnames = ["file", "fbid", "image_url", "fb_url", "email", "all_emails_in_image", "raw_text", "owner_id", "group_id", "collected_at"]
         now_iso = datetime.now().isoformat()
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
             emails_list = r.get("emails", [])
             collected_at = r.get("collected_at", now_iso)
+            owner_id = r.get("owner_id", "")
+            group_id = r.get("group_id", "")
             fbid = r["fbid"]
             fb_url = f"https://www.facebook.com/photo/?fbid={fbid}"
             if emails_list:
@@ -1495,6 +1509,8 @@ class FacebookScraper:
                         "email": email,
                         "all_emails_in_image": ", ".join(emails_list),
                         "raw_text": raw,
+                        "owner_id": owner_id,
+                        "group_id": group_id,
                         "collected_at": collected_at,
                     })
             else:
@@ -1506,6 +1522,8 @@ class FacebookScraper:
                     "email": "",
                     "all_emails_in_image": "",
                     "raw_text": raw,
+                    "owner_id": owner_id,
+                    "group_id": group_id,
                     "collected_at": collected_at,
                 })
         needs_header = not append

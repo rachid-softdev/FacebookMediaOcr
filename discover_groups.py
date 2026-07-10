@@ -134,7 +134,7 @@ def try_slug(dept_num, dept_name, slug):
             print("inaccessible")
             continue
 
-        lsd, gid = fetch_lsd(group_slug)
+        lsd, gid, member_count = fetch_lsd(group_slug)
         if not lsd:
             print("LSD absent")
             continue
@@ -158,6 +158,8 @@ def try_slug(dept_num, dept_name, slug):
             "dept_num": dept_num,
             "dept_name": dept_name,
             "source": "pattern",
+            "member_count": member_count,
+            "last_checked": datetime.now().isoformat(),
             "collected_at": datetime.now().isoformat(),
         }
     return None
@@ -329,7 +331,7 @@ def main():
                     print("inaccessible")
                     continue
 
-                lsd, gid = fetch_lsd(group_slug)
+                lsd, gid, member_count = fetch_lsd(group_slug)
                 if not lsd:
                     print("LSD absent")
                     continue
@@ -355,6 +357,8 @@ def main():
                     "dept_num": dept_num,
                     "dept_name": dept_name,
                     "source": "search",
+                    "member_count": member_count,
+                    "last_checked": datetime.now().isoformat(),
                     "collected_at": datetime.now().isoformat(),
                 }
                 break
