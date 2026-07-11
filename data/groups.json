@@ -2500,5 +2500,14 @@
     "dept_num": "",
     "dept_name": "",
     "source": "manual"
+  },
+  {
+    "name": "AlacarteemploiCHR",
+    "group_id": "AlacarteemploiCHR",
+    "slug": "AlacarteemploiCHR",
+    "url": "https://www.facebook.com/groups/AlacarteemploiCHR/",
+    "dept_num": "",
+    "dept_name": "",
+    "source": "manual"
   }
 ]
