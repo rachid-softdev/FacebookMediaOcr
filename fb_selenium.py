@@ -1410,6 +1410,17 @@ class FacebookScraper:
             print(f"{label}  ERR {e}")
             return None
 
+    @staticmethod
+    def _normalize_emails(emails):
+        """Convertit les emails ancien format (liste de strings) en format dict."""
+        normalized = []
+        for e in emails:
+            if isinstance(e, str):
+                normalized.append({"email": e, "stage": 1})
+            elif isinstance(e, dict):
+                normalized.append(e)
+        return normalized
+
     def run_live(self):
         """Pipeline live : GraphQL (Tor) -> download -> OCR page par page."""
         import subprocess as _sp
@@ -1423,6 +1434,8 @@ class FacebookScraper:
         if state and state.get("phase") == "live":
             processed_fbids = set(state.get("processed_fbids", []))
             ocr_results = state.get("ocr_results", [])
+            for r in ocr_results:
+                r["emails"] = self._normalize_emails(r.get("emails", []))
             if processed_fbids:
                 print(f"[*] Reprise : {len(processed_fbids)} photos déjà traitées")
 
@@ -1533,7 +1546,7 @@ class FacebookScraper:
         rows = []
         for r in ocr_results:
             raw = r.get("raw_text", "").replace('"', "'").strip()
-            emails_list = r.get("emails", [])
+            emails_list = self._normalize_emails(r.get("emails", []))
             collected_at = r.get("collected_at", now_iso)
             owner_id = r.get("owner_id", "")
             group_id = r.get("group_id", "")
@@ -1598,10 +1611,10 @@ class FacebookScraper:
         print("Emails trouvés")
         print(f"{'='*50}")
         for r in ocr_results:
-            for e in r["emails"]:
+            emails = self._normalize_emails(r.get("emails", []))
+            for e in emails:
                 print(f"  {e['email']}")
-        email_count = sum(len(r["emails"]) for r in ocr_results)
-        print(f"\n[OK] {email_count} email(s) -> {EMAILS_CSV}")
+        email_count = sum(len(r.get("emails", [])) for r in ocr_results)
 
 # --- Entry point ----------------------------------------------
 
