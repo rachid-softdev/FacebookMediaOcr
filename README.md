@@ -657,6 +657,65 @@ Démarrage
 | **Supprimer un groupe de groups.txt** | Les fichiers `state-{name}.json`, `download-{name}/`, `emails-{name}.csv` ne sont pas touchés. Ils restent sur le disque, à supprimer manuellement si souhaité. |
 | **Ajouter un nouveau groupe** | Une ligne dans `groups.txt` suffit. Au prochain run, le groupe n'aura pas de state → traité intégralement. |
 
+### 10. Supervisor (reprise manuelle après coupure)
+
+Le `supervisor.py` est un outil de **secours manuel** pour les interruptions en milieu de semaine
+(reboot VPS, coupure système, `Ctrl+C` accidentel). Il ne remplace pas le timer systemd hebdomadaire.
+
+#### Différence avec le timer systemd
+
+| | `run_all.sh --systemd` (systemd) | `supervisor.py` (manuel) |
+|---|---|---|
+| **Déclencheur** | Timer systemd (lundi 02:00) | Lancement manuel (`./supervisor.py`) |
+| **Groupes traités** | **Tous** les 295 groupes de `groups.txt` | **Uniquement** les groupes non finis |
+| **Notification** | `Groupe X/295` | `Groupe X/75` (ou moins selon les restants) |
+| **Parallélisme** | 2 groupes en simultané | 1 groupe à la fois (séquentiel) |
+| **Répétition** | Cycle hebdomadaire automatique | Reprise après coupure uniquement |
+
+Les deux outils sont **indépendants** : le lundi, le timer systemd reprend tout depuis le début
+avec `run_all.sh --systemd`. Les groupes déjà terminés s'arrêtent en ~2 secondes
+(grâce aux `state-*.json`).
+
+#### Utilisation
+
+```bash
+# Reprendre les groupes non finis (séquentiel)
+./supervisor.py
+
+# Avec parallélisme
+./supervisor.py --parallel 2
+```
+
+#### Fonctionnement
+
+1. Analyse `groups.txt` et identifie les groupes qui ont encore du travail
+2. Lance `fb_selenium.py` pour chaque groupe (qui reprend via son `state-*.json`)
+3. Sauvegarde l'avancement dans `results/supervisor-state.json`
+4. Si le superviseur est coupé (reboot, `Ctrl+C`), il reprend exactement là où il s'est arrêté
+5. Chaque groupe est réessayé jusqu'à **5 fois** en cas d'échec, puis abandonné
+6. Une fois tous les groupes terminés → `git push` automatique
+
+#### Exemple de cycle
+
+```
+═══════════════════════════════════════════════════════════════
+  Lundi 02:00 → systemd lance run_all.sh --systemd
+  ├─ Traite 295 groupes avec --group-pos "X/295"
+  └─ Coupure au groupe 227/288
+
+  Intervention manuelle → ./supervisor.py
+  ├─ Détecte 75 groupes non finis
+  ├─ [1/75] group214288905360691 → (tentative 1/5)
+  ├─ [2/75] contrat.alternance    → (tentative 1/5)
+  │  ... (notification "Groupe X/75")
+  └─ ✅ Tous les groupes terminés ! Git push.
+
+  Lundi suivant 02:00 → systemd relance run_all.sh
+  ├─ 295 groupes → les finis passent en ~2s
+  └─ Notification "Groupe X/295"
+═══════════════════════════════════════════════════════════════
+```
+
 #### Fichier state.json brut
 
 ```json
