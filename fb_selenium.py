@@ -1270,17 +1270,40 @@ class FacebookScraper:
     @staticmethod
     def _powershell_graphql_fbids(group_id, max_pages=500):
         """Récupère les URLs des photos via PowerShell + GraphQL (pas de login).
-        Retourne une liste de dicts {"fbid": ..., "url": ...} ou None."""
+        Retourne une liste de dicts {"fbid": ..., "url": ...} ou None.
+        En cas d'échec (LSD introuvable ou 1ère page GraphQL vide), un reset Tor
+        (NEWNYM) est tenté automatiquement avant de re-essayer une fois."""
         import time as _time
         from fb_graphql import fetch_lsd, graphql_page
+        from tor_utils import tor_reset_and_wait
+
         lsd, resolved_id, _, _ = fetch_lsd(group_id)
         if not lsd:
-            return None
+            print("  [!] LSD introuvable, reset Tor...")
+            if tor_reset_and_wait():
+                lsd, resolved_id, _, _ = fetch_lsd(group_id)
+                if not lsd:
+                    print("  [!] LSD toujours introuvable après reset Tor")
+                    return None
+            else:
+                return None
+
         photos = []
         cursor = None
         for page in range(1, max_pages + 1):
             print(f"  [GraphQL page {page}]", end="", flush=True)
             entries, cursor = graphql_page(lsd, resolved_id, cursor)
+
+            if entries is None and page == 1:
+                print(" error, reset Tor...")
+                if tor_reset_and_wait():
+                    entries, cursor = graphql_page(lsd, resolved_id, cursor)
+                    if entries is None:
+                        print("  [!] GraphQL toujours en échec après reset Tor")
+                        break
+                else:
+                    break
+
             if not entries:
                 print(" empty")
                 break

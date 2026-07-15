@@ -200,8 +200,11 @@ def graphql_page(lsd, group_id, cursor):
     if "errors" in result:
         return None, None
 
+    node = result.get("data", {}).get("node")
+    if not node:
+        return None, None
     media = (
-        result.get("data", {}).get("node", {})
+        node
         .get("group_mediaset", {}).get("media", {})
     )
     if not media:
@@ -369,8 +372,16 @@ if __name__ == "__main__":
     print("[*] Connexion…")
     lsd, resolved_id, _, _ = fetch_lsd(args.group_id)
     if not lsd:
-        notify("echec", group=args.group_id, script="fb_graphql", error="LSD introuvable")
-        sys.exit(1)
+        from tor_utils import tor_reset_and_wait
+        print("  [!] LSD introuvable, reset Tor…")
+        if tor_reset_and_wait():
+            lsd, resolved_id, _, _ = fetch_lsd(args.group_id)
+            if not lsd:
+                notify("echec", group=args.group_id, script="fb_graphql", error="LSD introuvable après reset Tor")
+                sys.exit(1)
+        else:
+            notify("echec", group=args.group_id, script="fb_graphql", error="Reset Tor échoué")
+            sys.exit(1)
 
     print("\n[*] Récupération des photos + OCR…")
     notify("debut", group=args.group_id, script="fb_graphql", data={"pages": args.pages})
@@ -385,6 +396,18 @@ if __name__ == "__main__":
         page += 1
         print(f"\n--- Page {page} ---")
         entries, cursor = graphql_page(lsd, resolved_id, cursor)
+
+        if entries is None and page == 1:
+            from tor_utils import tor_reset_and_wait
+            print("  error, reset Tor…")
+            if tor_reset_and_wait():
+                entries, cursor = graphql_page(lsd, resolved_id, cursor)
+                if entries is None:
+                    print("  [!] GraphQL toujours en échec après reset Tor")
+                    break
+            else:
+                break
+
         if not entries:
             if page == 1:
                 print("  [!] Aucune photo trouvée")
